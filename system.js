@@ -149,6 +149,7 @@
     initDock();
     initHub();
     initContextMenu();
+    initKeyboard();
 
     // Initialize Clearance UI
     updateClearanceUI();
@@ -603,6 +604,66 @@
   }
   function hideContextMenu() {
     document.getElementById('context-menu').classList.add('hidden');
+  }
+
+  // =============================================================
+  // KEYBOARD SHORTCUTS
+  // =============================================================
+  function initKeyboard() {
+    document.addEventListener('keydown', (e) => {
+      // Skip if typing in an input or textarea
+      if (e.target.matches('input, textarea, [contenteditable]')) return;
+
+      const ctrl = e.ctrlKey || e.metaKey;
+      const alt  = e.altKey;
+
+      // Ctrl+Alt+T → Terminal
+      if (ctrl && alt && e.key === 't') {
+        e.preventDefault();
+        Apps.launch('terminal');
+      }
+      // Ctrl+Alt+F → Files
+      if (ctrl && alt && e.key === 'f') {
+        e.preventDefault();
+        Apps.launch('files');
+      }
+      // Ctrl+Alt+B → Browser
+      if (ctrl && alt && e.key === 'b') {
+        e.preventDefault();
+        Apps.launch('browser');
+      }
+      // Ctrl+Alt+M → SysMonitor
+      if (ctrl && alt && e.key === 'm') {
+        e.preventDefault();
+        Apps.launch('sysmonitor');
+      }
+      // Ctrl+Alt+S → Settings
+      if (ctrl && alt && e.key === 's') {
+        e.preventDefault();
+        Apps.launch('settings');
+      }
+      // Super/Win key or Ctrl+Space → Hub
+      if (e.key === 'Meta' || (ctrl && e.key === ' ')) {
+        e.preventDefault();
+        toggleHub();
+      }
+      // Escape → close hub + context menu
+      if (e.key === 'Escape') {
+        hideHub();
+        hideContextMenu();
+      }
+      // Ctrl+W → close focused window
+      if (ctrl && e.key === 'w') {
+        e.preventDefault();
+        if (WM.state.focusedId) WM.close(WM.state.focusedId);
+      }
+      // Ctrl+Alt+W → cycle wallpaper
+      if (ctrl && alt && e.key === 'w') {
+        e.preventDefault();
+        cycleWallpaper();
+        Atlas.notify(`Wallpaper: ${wallpaperMode.toUpperCase()}`);
+      }
+    });
   }
 
   // =============================================================

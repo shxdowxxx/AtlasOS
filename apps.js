@@ -903,12 +903,155 @@ const Apps = (() => {
   }
 
   // =============================================================
+  // SETTINGS APP
+  // =============================================================
+  function openSettings() {
+    const root = el('div', { class: 'app-settings' });
+
+    const SECTIONS = [
+      { id: 'identity', label: 'IDENTITY',  icon: 'ph ph-user' },
+      { id: 'display',  label: 'DISPLAY',   icon: 'ph ph-monitor' },
+      { id: 'sound',    label: 'SOUND',     icon: 'ph ph-speaker-high' },
+      { id: 'system',   label: 'SYSTEM',    icon: 'ph ph-gear' },
+    ];
+
+    const sidebar = el('div', { class: 'settings-sidebar' });
+    const content = el('div', { class: 'settings-content' });
+    root.append(sidebar, content);
+
+    // Build nav
+    const navItems = {};
+    SECTIONS.forEach(({ id, label, icon }) => {
+      const item = el('div', { class: 'settings-nav-item', 'data-section': id });
+      const i = el('i', { class: icon });
+      const span = el('span'); span.textContent = label;
+      item.append(i, span);
+      item.addEventListener('click', () => activateSection(id));
+      sidebar.appendChild(item);
+      navItems[id] = item;
+    });
+
+    const sections = {};
+    function activateSection(id) {
+      Object.values(navItems).forEach(n => n.classList.remove('active'));
+      Object.values(sections).forEach(s => s.classList.remove('active'));
+      navItems[id].classList.add('active');
+      sections[id].classList.add('active');
+    }
+
+    // — IDENTITY —
+    const secIdentity = el('div', { class: 'settings-section', id: 'sec-identity' });
+    const idTitle = el('div', { class: 'settings-title' }); idTitle.textContent = 'IDENTITY';
+
+    const nameRow = el('div', { class: 'settings-row' });
+    const nameLbl = el('div', { class: 'settings-label' }); nameLbl.textContent = 'OPERATOR NAME';
+    const nameInput = el('input', { class: 'settings-input', type: 'text', placeholder: 'itzzzshxdow' });
+    nameInput.value = localStorage.getItem('atlas_operator') || 'itzzzshxdow';
+    nameRow.append(nameLbl, nameInput);
+
+    const saveName = el('button', { class: 'settings-save' }); saveName.textContent = 'SAVE';
+    saveName.addEventListener('click', () => {
+      const name = nameInput.value.trim() || 'itzzzshxdow';
+      localStorage.setItem('atlas_operator', name);
+      if (window.Atlas) window.Atlas.notify(`Operator name set: ${name}`);
+    });
+
+    secIdentity.append(idTitle, nameRow, saveName);
+
+    // — DISPLAY —
+    const secDisplay = el('div', { class: 'settings-section', id: 'sec-display' });
+    const dispTitle = el('div', { class: 'settings-title' }); dispTitle.textContent = 'DISPLAY';
+
+    const wpRow = el('div', { class: 'settings-row' });
+    const wpLbl = el('div', { class: 'settings-label' }); wpLbl.textContent = 'WALLPAPER';
+    wpRow.appendChild(wpLbl);
+
+    const wpBtns = el('div', { class: 'settings-btn-row' });
+    const currentWp = localStorage.getItem('atlas_wallpaper') || 'grid';
+    ['grid', 'particles', 'blackhole'].forEach(mode => {
+      const btn = el('button', { class: 'settings-btn' + (mode === currentWp ? ' active' : '') });
+      btn.textContent = mode.toUpperCase();
+      btn.addEventListener('click', () => {
+        wpBtns.querySelectorAll('.settings-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (window.Atlas) window.Atlas.setWallpaper(mode);
+      });
+      wpBtns.appendChild(btn);
+    });
+    wpRow.appendChild(wpBtns);
+    secDisplay.append(dispTitle, wpRow);
+
+    // — SOUND —
+    const secSound = el('div', { class: 'settings-section', id: 'sec-sound' });
+    const sndTitle = el('div', { class: 'settings-title' }); sndTitle.textContent = 'SOUND';
+
+    const sndRow = el('div', { class: 'settings-row' });
+    const sndLbl = el('div', { class: 'settings-label' }); sndLbl.textContent = 'AMBIENT SOUNDS';
+    sndRow.appendChild(sndLbl);
+
+    const sndBtns = el('div', { class: 'settings-btn-row' });
+    const sndOn = el('button', { class: 'settings-btn' + (window.AtlasSound && window.AtlasSound.isEnabled() ? ' active' : '') });
+    sndOn.textContent = 'ENABLED';
+    const sndOff = el('button', { class: 'settings-btn' + (window.AtlasSound && !window.AtlasSound.isEnabled() ? ' active' : '') });
+    sndOff.textContent = 'DISABLED';
+
+    sndOn.addEventListener('click', () => {
+      if (window.AtlasSound && !window.AtlasSound.isEnabled()) window.AtlasSound.toggle();
+      sndOn.classList.add('active'); sndOff.classList.remove('active');
+    });
+    sndOff.addEventListener('click', () => {
+      if (window.AtlasSound && window.AtlasSound.isEnabled()) window.AtlasSound.toggle();
+      sndOff.classList.add('active'); sndOn.classList.remove('active');
+    });
+
+    sndBtns.append(sndOn, sndOff);
+    sndRow.appendChild(sndBtns);
+    secSound.append(sndTitle, sndRow);
+
+    // — SYSTEM —
+    const secSystem = el('div', { class: 'settings-section', id: 'sec-system' });
+    const sysTitle = el('div', { class: 'settings-title' }); sysTitle.textContent = 'SYSTEM';
+
+    const rebootRow = el('div', { class: 'settings-row' });
+    const rebootLbl = el('div', { class: 'settings-label' }); rebootLbl.textContent = 'ACTIONS';
+    const rebootBtn = el('button', { class: 'settings-btn' }); rebootBtn.textContent = 'REBOOT';
+    rebootBtn.addEventListener('click', () => location.reload());
+    const clearBtn = el('button', { class: 'settings-btn' }); clearBtn.textContent = 'CLEAR VFS';
+    clearBtn.addEventListener('click', () => {
+      localStorage.removeItem('atlas_vfs');
+      localStorage.removeItem('atlas_vfs_ver');
+      if (window.Atlas) window.Atlas.notify('VFS cleared. Reboot to apply.');
+    });
+    const actRow = el('div', { class: 'settings-btn-row' });
+    actRow.append(rebootBtn, clearBtn);
+    rebootRow.append(rebootLbl, actRow);
+    secSystem.append(sysTitle, rebootRow);
+
+    // Mount all sections
+    sections['identity'] = secIdentity;
+    sections['display']  = secDisplay;
+    sections['sound']    = secSound;
+    sections['system']   = secSystem;
+    content.append(secIdentity, secDisplay, secSound, secSystem);
+
+    activateSection('identity');
+
+    return WM.create({
+      title: 'SETTINGS',
+      icon: 'ph ph-gear',
+      width: 540, height: 460,
+      content: root,
+      appKey: 'settings',
+    });
+  }
+
+  // =============================================================
   // LAUNCHER
   // =============================================================
   function launch(key, params = {}) {
     // Focus existing window if singleton app already open
     for (const d of WM.state.windows.values()) {
-      if (d.appKey === key && ['sysmonitor','files','sysinfo','browser','sentinel'].includes(key)) {
+      if (d.appKey === key && ['sysmonitor','files','sysinfo','browser','sentinel','settings'].includes(key)) {
         WM.focus(d.id);
         return d;
       }
@@ -921,6 +1064,7 @@ const Apps = (() => {
       case 'notepad':    return openNotepad(params.title, params.content, params.onSave);
       case 'sysinfo':    return openSysInfo();
       case 'sentinel':   return openSentinel();
+      case 'settings':   return openSettings();
     }
   }
 
@@ -956,7 +1100,7 @@ const Apps = (() => {
   const _savedTheme = localStorage.getItem('atlas_theme');
   if (_savedTheme) setTheme(_savedTheme);
 
-  return { launch, openTerminal, openSysMonitor, openBrowser, openFiles, openNotepad, openSysInfo, openSentinel, themeCycle, setTheme, VFS };
+  return { launch, openTerminal, openSysMonitor, openBrowser, openFiles, openNotepad, openSysInfo, openSentinel, openSettings, themeCycle, setTheme, VFS };
 })();
 
 // =============================================================

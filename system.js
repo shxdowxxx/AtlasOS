@@ -60,6 +60,7 @@
         document.getElementById('desktop').classList.remove('hidden');
         AtlasBootTime = performance.now();
         initDesktop();
+        Sound.boot();
       }, 600);
     }, 3400);
   }
@@ -72,6 +73,7 @@
       clearance: localStorage.getItem('atlas_clearance') || 'OPERATOR', // Levels: OPERATOR, EXECUTIVE, ROOT
     },
     notify: (msg, duration = 5000) => {
+      Sound.notify();
       const container = document.getElementById('toast-container');
       if (!container) return;
 
@@ -417,6 +419,14 @@
   // =============================================================
   function initHub() {
     const hub = document.getElementById('atlas-hub');
+
+    // Sync sound button label with saved preference
+    const soundBtn = document.getElementById('hub-sound-btn');
+    if (soundBtn) {
+      const on = Sound.isEnabled();
+      soundBtn.innerHTML = `<i class="ph ${on ? 'ph-speaker-high' : 'ph-speaker-slash'}"></i> Sound: ${on ? 'ON' : 'OFF'}`;
+    }
+
     const searchInput = document.getElementById('hub-search');
     const hubMain = hub.querySelector('.hub-main');
     
@@ -531,6 +541,13 @@
         if (action === 'wallpaper') cycleWallpaper();
         if (action === 'theme-toggle') Apps.themeCycle();
         if (action === 'reboot') location.reload();
+        if (action === 'sound-toggle') {
+          const on = Sound.toggle();
+          const soundBtn = document.getElementById('hub-sound-btn');
+          if (soundBtn) soundBtn.innerHTML = `<i class="ph ${on ? 'ph-speaker-high' : 'ph-speaker-slash'}"></i> Sound: ${on ? 'ON' : 'OFF'}`;
+          Atlas.notify(`Sound ${on ? 'enabled' : 'disabled'}.`);
+          return;
+        }
         if (action !== 'theme-toggle') hideHub();
       });
     });
@@ -606,6 +623,55 @@
   function hideContextMenu() {
     document.getElementById('context-menu').classList.add('hidden');
   }
+
+  // =============================================================
+  // SOUND ENGINE (Web Audio API — no files needed)
+  // =============================================================
+  let _actx = null;
+  let soundEnabled = localStorage.getItem('atlas_sound') !== 'off';
+
+  function getACtx() {
+    if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+    return _actx;
+  }
+
+  function playTone(freq, type, duration, gain = 0.15, detune = 0) {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getACtx();
+      const osc = ctx.createOscillator();
+      const env = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      if (detune) osc.detune.setValueAtTime(detune, ctx.currentTime);
+      env.gain.setValueAtTime(gain, ctx.currentTime);
+      env.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(env);
+      env.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + duration);
+    } catch (_) {}
+  }
+
+  const Sound = {
+    keyClick() { playTone(1200, 'square', 0.04, 0.06); },
+    notify()   { playTone(880, 'sine', 0.18, 0.12); setTimeout(() => playTone(1100, 'sine', 0.18, 0.12), 100); },
+    open()     { playTone(440, 'sine', 0.25, 0.1); setTimeout(() => playTone(660, 'sine', 0.2, 0.1), 80); },
+    close()    { playTone(660, 'sine', 0.15, 0.08); setTimeout(() => playTone(440, 'sine', 0.2, 0.08), 70); },
+    boot()     { [220, 330, 440, 660].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.15, 0.07), i * 90)); },
+    alert()    { [880, 660, 880, 660].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.12, 0.08), i * 120)); },
+    toggleOn() { [440, 550, 660].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.15, 0.1), i * 60)); },
+    toggleOff(){ [660, 550, 440].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.15, 0.1), i * 60)); },
+    isEnabled() { return soundEnabled; },
+    toggle() {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem('atlas_sound', soundEnabled ? 'on' : 'off');
+      if (soundEnabled) Sound.toggleOn(); else Sound.toggleOff();
+      return soundEnabled;
+    },
+  };
+
+  window.AtlasSound = Sound;
 
   // =============================================================
   // DESKTOP ICONS

@@ -256,6 +256,7 @@ const Apps = (() => {
     }, 15000);
 
     input.addEventListener('keydown', (e) => {
+      if (window.AtlasSound) window.AtlasSound.keyClick();
       if (e.key === 'Enter') {
         const raw = input.value;
         const display = el('div', { class: 'term-line' });

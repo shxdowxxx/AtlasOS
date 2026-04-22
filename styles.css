@@ -649,155 +649,241 @@ button { font-family: inherit; color: inherit; background: none; border: none; c
 .neofetch-info .v { color: var(--text-primary); }
 
 /* ============================================================
-   APP: SYS MONITOR
+   APP: SYS MONITOR — CRIMSON CORE
    ============================================================ */
 .app-sysmon {
-  display: grid;
-  grid-template-rows: auto 1fr 1fr auto;
-  gap: 10px;
-  padding: 14px;
+  display: flex; flex-direction: column;
   height: 100%;
-  background:
-    linear-gradient(180deg, rgba(139,0,0,0.03), transparent),
-    var(--bg-deep);
-  font-family: var(--font-mono);
-  color: var(--text-secondary);
-  font-size: 11px;
+  background: radial-gradient(circle at top, rgba(139,0,0,0.1), var(--bg-void));
+  padding: 20px;
+  gap: 20px;
+  overflow-y: auto;
 }
 .sysmon-header {
-  display: flex; justify-content: space-between;
-  font-family: var(--font-ui);
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: var(--red-neon);
-  text-shadow: 0 0 6px var(--red-glow);
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 8px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--border-hot);
+  padding-bottom: 12px;
 }
-.sysmon-chart {
-  position: relative;
-  border: 1px solid var(--border-subtle);
-  background: rgba(0,0,0,0.5);
-  overflow: hidden;
-}
-.sysmon-chart canvas { display: block; width: 100%; height: 100%; }
-.sysmon-chart-label {
-  position: absolute; top: 8px; left: 10px;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: var(--red-neon);
-  text-shadow: 0 0 6px var(--red-glow);
-}
-.sysmon-chart-value {
-  position: absolute; top: 8px; right: 10px;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
+.sysmon-title {
+  font-family: var(--font-display);
   font-size: 14px;
-  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--red-neon);
+  text-shadow: 0 0 10px var(--red-glow);
 }
-.sysmon-procs {
+.sysmon-uptime {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.sysmon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.sysmon-card {
+  background: rgba(255,255,255,0.02);
   border: 1px solid var(--border-subtle);
-  padding: 8px 10px;
-  background: rgba(0,0,0,0.4);
-  max-height: 140px;
-  overflow-y: auto;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px;
+}
+.sysmon-card-header {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+  width: 100%;
+  text-align: left;
+}
+.sysmon-gauge-container {
+  position: relative;
+  width: 140px; height: 140px;
+}
+.sysmon-gauge-container canvas { width: 100%; height: 100%; }
+.sysmon-gauge-value {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--text-primary);
+  text-shadow: 0 0 10px var(--red-glow);
+}
+.sysmon-gauge-unit {
+  position: absolute; bottom: 30px; left: 0; right: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+}
+.sysmon-mini-chart {
+  width: 100%; height: 40px;
+  margin-top: 10px;
+}
+.sysmon-mini-chart canvas { width: 100%; height: 100%; }
+
+.sysmon-procs {
+  flex: 1;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.sysmon-procs-header {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--red-crimson);
+  margin-bottom: 10px;
+  letter-spacing: 1px;
 }
 .sysmon-procs table { width: 100%; border-collapse: collapse; }
 .sysmon-procs th {
   text-align: left;
-  color: var(--red-crimson);
-  font-weight: 400;
-  letter-spacing: 2px;
+  font-family: var(--font-mono);
   font-size: 10px;
-  padding: 2px 4px;
+  color: var(--text-muted);
+  padding: 8px;
   border-bottom: 1px solid var(--border-subtle);
 }
 .sysmon-procs td {
-  padding: 3px 4px;
-  color: var(--text-primary);
-  font-size: 11px;
-}
-
-/* ============================================================
-   APP: NEXUS BROWSER
-   ============================================================ */
-.app-browser {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  height: 100%;
-  background: var(--bg-deep);
-}
-.browser-toolbar {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 10px;
-  background: linear-gradient(180deg, rgba(20,20,24,0.9), rgba(10,10,12,0.9));
-  border-bottom: 1px solid var(--border-subtle);
-}
-.browser-btn {
-  width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(255,49,49,0.03);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  color: var(--text-secondary);
-  transition: all 0.15s ease;
-}
-.browser-btn:hover:not(:disabled) {
-  background: rgba(139,0,0,0.3);
-  color: var(--red-neon);
-  border-color: var(--border-hot);
-}
-.browser-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.browser-url {
-  flex: 1;
-  height: 30px;
-  padding: 0 12px;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid var(--border-hot);
-  border-radius: 4px;
-  color: var(--red-neon);
+  padding: 10px 8px;
   font-family: var(--font-mono);
   font-size: 12px;
-  outline: none;
-  text-shadow: 0 0 4px var(--red-glow);
-}
-.browser-url:focus { border-color: var(--border-active); box-shadow: 0 0 8px var(--red-glow); }
-.browser-frame {
-  width: 100%; height: 100%;
-  border: none;
-  background: #111;
-}
-.browser-home {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  height: 100%;
-  font-family: var(--font-display);
-  color: var(--red-neon);
-  text-shadow: 0 0 20px var(--red-glow);
-  gap: 20px;
-}
-.browser-home h1 { font-size: 48px; letter-spacing: 8px; }
-.browser-home p { color: var(--text-secondary); font-family: var(--font-ui); letter-spacing: 3px; font-size: 12px; }
-.browser-bookmarks {
-  display: flex; gap: 10px; flex-wrap: wrap;
-  max-width: 600px; justify-content: center;
-  margin-top: 10px;
-}
-.browser-bookmark {
-  padding: 8px 16px;
-  border: 1px solid var(--border-hot);
-  border-radius: 4px;
   color: var(--text-primary);
-  font-family: var(--font-ui);
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+.proc-status {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+}
+.proc-status.core { background: var(--red-dark); color: #fff; }
+.proc-status.run { background: rgba(74, 222, 128, 0.1); color: #4ade80; }
+.proc-status.watch { background: rgba(251, 191, 36, 0.1); color: #fbbf24; }
+.proc-kill {
+  padding: 4px 8px;
+  border: 1px solid var(--red-dark);
+  color: var(--red-neon);
+  font-size: 9px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.proc-kill:hover { background: var(--red-neon); color: #fff; box-shadow: 0 0 10px var(--red-glow); }
+
+/* ============================================================
+   APP: NEXUS BROWSER — INTERFACE
+   ============================================================ */
+.app-browser {
+  display: flex; flex-direction: column;
+  height: 100%;
+  background: var(--bg-void);
+  position: relative;
+}
+.browser-toolbar {
+  display: flex; align-items: center; gap: 15px;
+  padding: 10px 20px;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 10;
+}
+.browser-nav-group { display: flex; gap: 4px; }
+.browser-btn {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.browser-btn:hover:not(:disabled) { background: rgba(255,255,255,0.05); color: var(--red-neon); }
+.browser-url {
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 6px 16px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.3s;
+}
+.browser-url:focus { border-color: var(--red-crimson); box-shadow: 0 0 15px rgba(210,4,45,0.2); }
+.browser-vpn-btn {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--text-muted);
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+.browser-vpn-btn.active {
+  border-color: #4ade80;
+  color: #4ade80;
+  text-shadow: 0 0 8px rgba(74,222,128,0.5);
+  box-shadow: inset 0 0 10px rgba(74,222,128,0.1);
+}
+
+.browser-viewport { flex: 1; position: relative; }
+.browser-frame { width: 100%; height: 100%; border: none; background: #fff; }
+
+.browser-home {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(circle, #0a0a0c 0%, #000 100%);
+  gap: 10px;
+}
+.browser-logo-glitch {
+  font-family: var(--font-display);
+  font-size: 64px;
+  letter-spacing: 12px;
+  color: var(--text-primary);
+  text-shadow: 0 0 30px var(--red-glow);
+}
+.browser-sub {
+  font-family: var(--font-mono);
   font-size: 12px;
-  letter-spacing: 2px;
-  transition: all 0.2s ease;
+  color: var(--red-crimson);
+  letter-spacing: 4px;
+  margin-bottom: 40px;
 }
-.browser-bookmark:hover {
-  background: var(--red-dark);
-  box-shadow: 0 0 16px var(--red-glow);
+.browser-nodes {
+  display: flex; gap: 20px;
 }
+.browser-node {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  width: 100px; padding: 20px 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s var(--ease-snap);
+}
+.browser-node i { font-size: 24px; color: var(--text-secondary); }
+.browser-node span { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); letter-spacing: 1px; }
+.browser-node:hover {
+  transform: translateY(-5px);
+  background: rgba(255,49,49,0.05);
+  border-color: var(--red-neon);
+  box-shadow: 0 10px 30px rgba(210,4,45,0.2);
+}
+.browser-node:hover i { color: var(--red-neon); }
+.browser-node:hover span { color: var(--text-primary); }
+
+.browser-vpn-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: linear-gradient(rgba(74, 222, 128, 0.02) 50%, rgba(0, 0, 0, 0) 50%);
+  background-size: 100% 4px;
+  border: 2px solid rgba(74, 222, 128, 0.1);
+  box-shadow: inset 0 0 100px rgba(74, 222, 128, 0.05);
+  z-index: 5;
+}
+
 
 /* ============================================================
    APP: FILE SYSTEM

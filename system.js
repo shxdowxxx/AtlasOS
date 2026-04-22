@@ -394,6 +394,14 @@
     }
     tickSlow();
     setInterval(tickSlow, 1000);
+
+    // Presence counter fed by Firebase
+    const hudPresenceEl = document.getElementById('hud-presence');
+    const hubPresenceEl = document.getElementById('hub-presence');
+    window.addEventListener('atlas:presence', ({ detail: { count } }) => {
+      if (hudPresenceEl) hudPresenceEl.textContent = count;
+      if (hubPresenceEl) hubPresenceEl.textContent = count;
+    });
   }
 
   // =============================================================

@@ -39,12 +39,22 @@ service cloud.firestore {
 
     // ──────────────────────────────────────────────
     //  Presence
+    //  Authenticated users write their own UID doc.
+    //  Anonymous visitors write a session-ID doc (anon-*).
     // ──────────────────────────────────────────────
     match /presence/{userId} {
       allow read: if true;
 
+      // Authenticated: own UID only
       allow write: if isAuthenticated()
         && request.auth.uid == userId;
+
+      // Anonymous: session ID must start with "anon-" and be short
+      allow write: if !isAuthenticated()
+        && userId.matches('anon-.{8}')
+        && request.resource.data.keys().hasAll(['uid', 'name', 'ts']);
+
+      allow delete: if true;
     }
 
     // ──────────────────────────────────────────────

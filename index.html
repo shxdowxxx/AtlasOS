@@ -43,6 +43,10 @@
       <span class="hud-session">SESSION: <span id="hud-session">INIT</span></span>
     </div>
     <div class="hud-right">
+      <div class="hud-stat" title="Online operators">
+        <i class="ph ph-users"></i>
+        <span id="hud-presence" class="hud-value">--</span>
+      </div>
       <div class="hud-stat" title="Network">
         <i class="ph ph-wifi-high"></i>
         <span id="hud-net" class="hud-value">OK</span>
@@ -109,6 +113,10 @@
           <div class="hub-stat-row">
             <span>MEM</span>
             <div class="hub-mini-bar"><div id="hub-mem-fill" class="hub-bar-fill" style="width: 45%"></div></div>
+          </div>
+          <div class="hub-stat-row">
+            <span>ONLINE</span>
+            <span id="hub-presence" class="accent">--</span>
           </div>
           <div class="hub-stat-row">
             <span>FPS</span>

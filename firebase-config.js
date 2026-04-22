@@ -8,6 +8,15 @@ import {
   signOut,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  deleteDoc,
+  collection,
+  onSnapshot,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBR3sohvZiUvdV2feYyfnXzgW6jkjmP6Bs",
@@ -22,7 +31,34 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
+const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
+
+// Session ID for anonymous presence
+const _sessionId = 'anon-' + Math.random().toString(36).slice(2, 10);
+let _presenceRef = null;
+
+async function _writePresence(user) {
+  const id = user ? user.uid : _sessionId;
+  _presenceRef = doc(db, 'presence', id);
+  await setDoc(_presenceRef, {
+    uid: id,
+    name: user ? (user.displayName || 'operator') : 'anonymous',
+    ts: serverTimestamp(),
+  });
+}
+
+async function _removePresence() {
+  if (_presenceRef) {
+    await deleteDoc(_presenceRef).catch(() => {});
+    _presenceRef = null;
+  }
+}
+
+// Watch presence collection → broadcast count
+onSnapshot(collection(db, 'presence'), (snap) => {
+  window.dispatchEvent(new CustomEvent('atlas:presence', { detail: { count: snap.size } }));
+});
 
 // Auth helpers exposed to classic scripts
 const AtlasAuth = {
@@ -40,13 +76,21 @@ const AtlasAuth = {
   },
 };
 
-window.AtlasFirebase = { app, analytics, auth, AtlasAuth };
+window.AtlasFirebase = { app, analytics, auth, db, AtlasAuth };
 
-// Notify system when auth state changes
-onAuthStateChanged(auth, (user) => {
+// Manage presence on auth state change
+onAuthStateChanged(auth, async (user) => {
+  await _removePresence();
+  await _writePresence(user).catch(() => {});
   window.dispatchEvent(new CustomEvent('atlas:authchange', { detail: { user } }));
 });
 
-console.log("ATLAS // Firebase initialized (Auth ready).");
+// Write anonymous presence immediately on load
+_writePresence(null).catch(() => {});
 
-export { app, analytics, auth, AtlasAuth };
+// Remove presence on page unload
+window.addEventListener('beforeunload', () => { _removePresence(); });
+
+console.log("ATLAS // Firebase initialized (Auth + Presence ready).");
+
+export { app, analytics, auth, db, AtlasAuth };

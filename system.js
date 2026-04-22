@@ -376,8 +376,29 @@
     resultsContainer.className = 'hub-results hidden';
     hubMain.appendChild(resultsContainer);
 
-    function showResults(html) {
-      resultsContainer.innerHTML = html;
+    function makeResult(icon, label, cls, onClick) {
+      const div = document.createElement('div');
+      div.className = 'search-result' + (cls ? ' ' + cls : '');
+      const i = document.createElement('i');
+      i.className = icon;
+      const span = document.createElement('span');
+      span.textContent = label;
+      div.appendChild(i);
+      div.appendChild(span);
+      div.addEventListener('click', onClick);
+      return div;
+    }
+
+    function showResults(items) {
+      resultsContainer.innerHTML = '';
+      if (items.length === 0) {
+        const msg = document.createElement('div');
+        msg.className = 'search-no-results';
+        msg.textContent = 'No matches found';
+        resultsContainer.appendChild(msg);
+      } else {
+        items.forEach(item => resultsContainer.appendChild(item));
+      }
       resultsContainer.classList.remove('hidden');
       hub.querySelectorAll('.hub-tile, .hub-section-label, .hub-grid, .hub-options').forEach(el => el.classList.add('hidden'));
     }
@@ -394,71 +415,63 @@
       });
     });
 
-    // Search functionality
+    const APP_DEFS = [
+      { name: 'Terminal', key: 'terminal', icon: 'ph ph-terminal-window' },
+      { name: 'System Monitor', key: 'sysmonitor', icon: 'ph ph-pulse' },
+      { name: 'Nexus Browser', key: 'browser', icon: 'ph ph-globe' },
+      { name: 'File System', key: 'files', icon: 'ph ph-folder' },
+      { name: 'Notepad', key: 'notepad', icon: 'ph ph-note-pencil' },
+      { name: 'System Info', key: 'sysinfo', icon: 'ph ph-info' },
+    ];
+
+    const ACTION_DEFS = [
+      { name: 'Reboot System', icon: 'ph ph-arrow-clockwise', fn: () => location.reload() },
+      { name: 'Change Wallpaper', icon: 'ph ph-image', fn: () => cycleWallpaper() },
+      { name: 'Cycle Theme', icon: 'ph ph-palette', fn: () => Apps.themeCycle() },
+    ];
+
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
         const q = e.target.value.toLowerCase().trim();
-        if (!q) {
-          hideResults();
-          return;
-        }
+        if (!q) { hideResults(); return; }
 
-        const results = [];
-        
-        // 1. Search Apps
-        const apps = [
-          { name: 'Terminal', key: 'terminal', icon: 'ph ph-terminal-window' },
-          { name: 'System Monitor', key: 'sysmonitor', icon: 'ph ph-pulse' },
-          { name: 'Nexus Browser', key: 'browser', icon: 'ph ph-globe' },
-          { name: 'File System', key: 'files', icon: 'ph ph-folder' },
-          { name: 'Notepad', key: 'notepad', icon: 'ph ph-note-pencil' },
-          { name: 'System Info', key: 'sysinfo', icon: 'ph ph-info' },
-        ];
-        apps.forEach(a => {
+        const items = [];
+
+        APP_DEFS.forEach(a => {
           if (a.name.toLowerCase().includes(q)) {
-            results.push(`<div class="search-result" onclick="Apps.launch('${a.key}'); Atlas.hideHub()">
-              <i class="${a.icon}"></i>
-              <span>App: ${a.name}</span>
-            </div>`);
+            items.push(makeResult(a.icon, `App: ${a.name}`, '', () => {
+              Apps.launch(a.key);
+              hideHub();
+            }));
           }
         });
 
-        // 2. Search VFS
         if (Apps.VFS) {
           Object.entries(Apps.VFS.data).forEach(([path, entries]) => {
             entries.forEach(entry => {
               if (entry.name.toLowerCase().includes(q)) {
                 const fullPath = path === '/' ? '/' + entry.name : path + '/' + entry.name;
                 const icon = entry.type === 'folder' ? 'ph ph-folder' : 'ph ph-file-text';
-                results.push(`<div class="search-result" onclick="Apps.launch('${entry.type === 'folder' ? 'files' : 'notepad'}', {title: '${entry.name}', content: \`${(entry.content || '').replace(/`/g, '\\`')}\`}); Atlas.hideHub()">
-                  <i class="${icon}"></i>
-                  <span>File: ${fullPath}</span>
-                </div>`);
+                const params = entry.type === 'file' ? { title: entry.name, content: entry.content || '' } : {};
+                items.push(makeResult(icon, `File: ${fullPath}`, '', () => {
+                  Apps.launch(entry.type === 'folder' ? 'files' : 'notepad', params);
+                  hideHub();
+                }));
               }
             });
           });
         }
 
-        // 3. Quick Actions
-        const actions = [
-          { name: 'Reboot System', action: () => location.reload(), icon: 'ph ph-arrow-clockwise' },
-          { name: 'Change Wallpaper', action: () => cycleWallpaper(), icon: 'ph ph-image' },
-          { name: 'Cycle Theme', action: () => Apps.themeCycle(), icon: 'ph ph-palette' },
-        ];
-        actions.forEach(a => {
+        ACTION_DEFS.forEach(a => {
           if (a.name.toLowerCase().includes(q)) {
-            results.push(`<div class="search-result action" onclick="Atlas.notify('Executing: ${a.name}'); Atlas.executeAction('${a.name}')">
-              <i class="${a.icon}"></i>
-              <span>Action: ${a.name}</span>
-            </div>`);
+            items.push(makeResult(a.icon, `Action: ${a.name}`, 'action', () => {
+              Atlas.notify(`Executing: ${a.name}`);
+              a.fn();
+            }));
           }
         });
 
-        if (results.length > 0) {
-          showResults(results.join(''));
-        } else {
-          showResults(`<div class="search-no-results">No matches found for "${q}"</div>`);
-        }
+        showResults(items);
       });
     }
 
@@ -486,17 +499,18 @@
   }
 
   window.Atlas.hideHub = hideHub;
-  window.Atlas.executeAction = (name) => {
-    if (name === 'Reboot System') location.reload();
-    if (name === 'Change Wallpaper') cycleWallpaper();
-    if (name === 'Cycle Theme') Apps.themeCycle();
-  };
   function toggleHub() {
     const hub = document.getElementById('atlas-hub');
     hub.classList.toggle('hidden');
   }
   function hideHub() {
-    document.getElementById('atlas-hub').classList.add('hidden');
+    const hub = document.getElementById('atlas-hub');
+    hub.classList.add('hidden');
+    const si = document.getElementById('hub-search');
+    if (si) si.value = '';
+    const results = hub.querySelector('.hub-results');
+    if (results) results.classList.add('hidden');
+    hub.querySelectorAll('.hub-tile, .hub-section-label, .hub-grid, .hub-options').forEach(el => el.classList.remove('hidden'));
   }
 
   // =============================================================

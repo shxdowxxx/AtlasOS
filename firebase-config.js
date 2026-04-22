@@ -16,6 +16,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
+// Expose on window so non-module scripts can access when Auth/Firestore are added
+window.AtlasFirebase = { app, analytics };
+
 console.log("ATLAS // Firebase initialized.");
 
 export { app, analytics };

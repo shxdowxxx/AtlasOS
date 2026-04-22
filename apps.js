@@ -791,15 +791,11 @@ const Apps = (() => {
 
   function themeCycle() {
     const root = document.documentElement;
-    const current = getComputedStyle(root).getPropertyValue('--red-neon').trim().toUpperCase();
-    
-    if (current === '#8B0000' || current === 'RGB(139, 0, 0)') {
-      setTheme('mid');
-    } else if (current === '#D2042D' || current === 'RGB(210, 4, 45)') {
-      setTheme('high');
-    } else {
-      setTheme('low');
-    }
+    const current = (root.style.getPropertyValue('--red-neon') ||
+                     getComputedStyle(root).getPropertyValue('--red-neon')).trim();
+    if (current === '#8B0000') setTheme('mid');
+    else if (current === '#D2042D') setTheme('high');
+    else setTheme('low');
   }
 
   function setTheme(mode) {

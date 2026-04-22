@@ -956,7 +956,71 @@ const Apps = (() => {
       if (window.Atlas) window.Atlas.notify(`Operator name set: ${name}`);
     });
 
-    secIdentity.append(idTitle, nameRow, saveName);
+    const authRow = el('div', { class: 'settings-row' });
+    const authLbl = el('div', { class: 'settings-label' }); authLbl.textContent = 'GOOGLE ACCOUNT';
+    authRow.appendChild(authLbl);
+
+    const authBtns = el('div', { class: 'settings-btn-row' });
+    const signInBtn = el('button', { class: 'settings-btn' }); signInBtn.textContent = 'SIGN IN WITH GOOGLE';
+    const signOutBtn = el('button', { class: 'settings-btn' }); signOutBtn.textContent = 'SIGN OUT';
+
+    const authStatus = el('div', { class: 'settings-label' });
+    authStatus.style.marginTop = '8px';
+
+    function updateAuthUI() {
+      const fb = window.AtlasFirebase;
+      if (fb && fb.AtlasAuth) {
+        const user = fb.AtlasAuth.currentUser();
+        if (user) {
+          authStatus.textContent = `Signed in as: ${user.displayName || user.email}`;
+          signInBtn.style.display = 'none';
+          signOutBtn.style.display = '';
+          nameInput.value = localStorage.getItem('atlas_operator') || user.displayName || 'itzzzshxdow';
+        } else {
+          authStatus.textContent = 'Not signed in.';
+          signInBtn.style.display = '';
+          signOutBtn.style.display = 'none';
+        }
+      } else {
+        authStatus.textContent = 'Firebase not ready.';
+        signInBtn.style.display = 'none';
+        signOutBtn.style.display = 'none';
+      }
+    }
+
+    signInBtn.addEventListener('click', async () => {
+      const fb = window.AtlasFirebase;
+      if (!fb || !fb.AtlasAuth) return;
+      try {
+        const result = await fb.AtlasAuth.signIn();
+        const user = result.user;
+        if (!localStorage.getItem('atlas_operator')) {
+          localStorage.setItem('atlas_operator', user.displayName || 'operator');
+          nameInput.value = user.displayName || 'operator';
+        }
+        updateAuthUI();
+        if (window.Atlas) window.Atlas.notify(`Authenticated: ${user.displayName || user.email}`);
+      } catch (err) {
+        if (window.Atlas) window.Atlas.notify('Sign-in failed or cancelled.');
+      }
+    });
+
+    signOutBtn.addEventListener('click', async () => {
+      const fb = window.AtlasFirebase;
+      if (!fb || !fb.AtlasAuth) return;
+      await fb.AtlasAuth.signOut();
+      updateAuthUI();
+      if (window.Atlas) window.Atlas.notify('Signed out of Google account.');
+    });
+
+    authBtns.append(signInBtn, signOutBtn);
+    authRow.append(authBtns, authStatus);
+
+    // Sync auth UI when Firebase reports state change
+    window.addEventListener('atlas:authchange', updateAuthUI);
+    updateAuthUI();
+
+    secIdentity.append(idTitle, nameRow, saveName, authRow);
 
     // — DISPLAY —
     const secDisplay = el('div', { class: 'settings-section', id: 'sec-display' });

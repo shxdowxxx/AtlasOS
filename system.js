@@ -118,15 +118,26 @@
     }
   };
 
+  function getOperatorName() {
+    return localStorage.getItem('atlas_operator') || 'operator';
+  }
+
   function updateClearanceUI() {
     const el = document.getElementById('hud-session');
     if (el) el.textContent = Atlas.state.clearance;
-    
+
     const footer = document.querySelector('.hub-footer-strip span');
     if (footer) {
-      footer.innerHTML = `<i class="ph-fill ph-user-circle"></i> operator@thesizcorp // ${Atlas.state.clearance}`;
+      footer.innerHTML = `<i class="ph-fill ph-user-circle"></i> ${getOperatorName()}@thesizcorp // ${Atlas.state.clearance}`;
     }
   }
+
+  window.addEventListener('atlas:authchange', ({ detail: { user } }) => {
+    if (user && !localStorage.getItem('atlas_operator')) {
+      localStorage.setItem('atlas_operator', user.displayName || 'operator');
+    }
+    updateClearanceUI();
+  });
 
   function applyRootTheme() {
     const root = document.documentElement;

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atlas OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;500;600&family=Share+Tech+Mono&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============ BOOT SCREEN ============ -->
+<div id="boot-screen" class="boot-screen">
+  <div class="boot-terminal">
+    <pre id="boot-log" class="boot-log"></pre>
+  </div>
+  <div class="boot-logo" id="boot-logo">
+    <div class="boot-logo-glitch" data-text="ATLAS">ATLAS</div>
+    <div class="boot-logo-sub">OPERATING SYSTEM v1.0.0</div>
+  </div>
+  <div class="boot-scanlines"></div>
+</div>
+
+<!-- ============ DESKTOP ============ -->
+<div id="desktop" class="desktop hidden">
+
+  <!-- Live wallpaper canvas -->
+  <canvas id="wallpaper" class="wallpaper"></canvas>
+
+  <!-- Desktop grid overlay -->
+  <div class="desktop-overlay"></div>
+
+  <!-- System HUD (top bar) -->
+  <div class="hud">
+    <div class="hud-left">
+      <span class="hud-brand"><i class="ph-fill ph-hexagon"></i> ATLAS</span>
+      <span class="hud-sep">//</span>
+      <span class="hud-session">SESSION: <span id="hud-session">INIT</span></span>
+    </div>
+    <div class="hud-right">
+      <div class="hud-stat" title="Network">
+        <i class="ph ph-wifi-high"></i>
+        <span id="hud-net" class="hud-value">OK</span>
+      </div>
+      <div class="hud-stat" title="System time">
+        <i class="ph ph-clock"></i>
+        <span id="hud-time-simple">--:--</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Windows mount -->
+  <div id="windows-root" class="windows-root"></div>
+
+  <!-- DOCK -->
+  <div class="dock-container">
+    <div class="dock" id="dock">
+      <button class="dock-item dock-hub" data-app="hub" title="Siz-Link Control">
+        <i class="ph-fill ph-hexagon"></i>
+      </button>
+      <div class="dock-sep"></div>
+      <button class="dock-item" data-app="terminal" title="Atlas_CMD">
+        <i class="ph ph-terminal-window"></i>
+      </button>
+      <button class="dock-item" data-app="sysmonitor" title="SysMonitor">
+        <i class="ph ph-pulse"></i>
+      </button>
+      <button class="dock-item" data-app="browser" title="Nexus Browser">
+        <i class="ph ph-globe"></i>
+      </button>
+      <button class="dock-item" data-app="files" title="File System">
+        <i class="ph ph-folder"></i>
+      </button>
+      <button class="dock-item" data-app="notepad" title="Notepad">
+        <i class="ph ph-note-pencil"></i>
+      </button>
+      <div class="dock-sep"></div>
+      <div class="dock-running" id="dock-running"></div>
+    </div>
+  </div>
+
+  <!-- Atlas Hub / Siz-Link Control Center -->
+  <div id="atlas-hub" class="atlas-hub hidden">
+    <div class="hub-container">
+      <div class="hub-sidebar">
+        <div class="hub-clock-large">
+          <div id="hub-time" class="hub-time">--:--:--</div>
+          <div id="hub-date" class="hub-date">----.--.--</div>
+        </div>
+        <div class="hub-stats-list">
+          <div class="hub-stat-row">
+            <span>CPU</span>
+            <div class="hub-mini-bar"><div id="hub-cpu-fill" class="hub-bar-fill" style="width: 20%"></div></div>
+          </div>
+          <div class="hub-stat-row">
+            <span>MEM</span>
+            <div class="hub-mini-bar"><div id="hub-mem-fill" class="hub-bar-fill" style="width: 45%"></div></div>
+          </div>
+          <div class="hub-stat-row">
+            <span>FPS</span>
+            <span id="hud-fps" class="accent">0</span>
+          </div>
+        </div>
+        <div class="hub-sidebar-footer">
+          <button class="hub-power" title="Shut down" id="hub-power"><i class="ph ph-power"></i></button>
+        </div>
+      </div>
+      
+      <div class="hub-main">
+        <div class="hub-search-container">
+          <i class="ph ph-magnifying-glass"></i>
+          <input type="text" id="hub-search" placeholder="Search files, apps, or commands..." autocomplete="off">
+        </div>
+        
+        <div class="hub-section-label">APPLICATIONS</div>
+        <div class="hub-grid">
+          <button class="hub-tile" data-app="terminal"><i class="ph ph-terminal-window"></i><span>Atlas_CMD</span></button>
+          <button class="hub-tile" data-app="sysmonitor"><i class="ph ph-pulse"></i><span>SysMonitor</span></button>
+          <button class="hub-tile" data-app="browser"><i class="ph ph-globe"></i><span>Nexus</span></button>
+          <button class="hub-tile" data-app="files"><i class="ph ph-folder"></i><span>Files</span></button>
+          <button class="hub-tile" data-app="notepad"><i class="ph ph-note-pencil"></i><span>Notepad</span></button>
+          <button class="hub-tile" data-app="sysinfo"><i class="ph ph-info"></i><span>Sys Info</span></button>
+        </div>
+
+        <div class="hub-section-label">SYSTEM OPTIONS</div>
+        <div class="hub-options">
+          <button class="hub-option-btn" data-action="wallpaper"><i class="ph ph-image"></i> Change Wallpaper</button>
+          <button class="hub-option-btn" data-action="theme-toggle"><i class="ph ph-palette"></i> Cycle Accent</button>
+          <button class="hub-option-btn" data-action="reboot"><i class="ph ph-arrow-clockwise"></i> System Reboot</button>
+        </div>
+      </div>
+    </div>
+    <div class="hub-footer-strip">
+      <span><i class="ph-fill ph-user-circle"></i> operator@thesizcorp</span>
+      <span class="hub-status"><span class="hub-status-dot"></span>ENCRYPTED SESSION</span>
+    </div>
+  </div>
+
+  <!-- Custom Context Menu -->
+  <div id="context-menu" class="context-menu hidden">
+    <div class="ctx-header">ATLAS // CONTEXT</div>
+    <button class="ctx-item" data-action="new-file"><i class="ph ph-file-plus"></i> New File</button>
+    <button class="ctx-item" data-action="wallpaper"><i class="ph ph-image"></i> Change Wallpaper</button>
+    <button class="ctx-item" data-action="sysinfo"><i class="ph ph-info"></i> System Info</button>
+    <button class="ctx-item" data-action="terminal"><i class="ph ph-terminal-window"></i> Open Terminal</button>
+    <div class="ctx-sep"></div>
+    <button class="ctx-item ctx-danger" data-action="reboot"><i class="ph ph-arrow-clockwise"></i> Reboot</button>
+  </div>
+
+</div>
+
+<script src="windowManager.js"></script>
+<script src="apps.js"></script>
+<script src="system.js"></script>
+</body>
+</html>

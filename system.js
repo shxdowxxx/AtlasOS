@@ -65,9 +65,12 @@
   }
 
   // =============================================================
-  // ATLAS GLOBAL API
+  // ATLAS GLOBAL API & STATE
   // =============================================================
   window.Atlas = {
+    state: {
+      clearance: localStorage.getItem('atlas_clearance') || 'OPERATOR', // Levels: OPERATOR, EXECUTIVE, ROOT
+    },
     notify: (msg, duration = 5000) => {
       const container = document.getElementById('toast-container');
       if (!container) return;
@@ -96,8 +99,40 @@
         toast.classList.remove('visible');
         setTimeout(() => toast.remove(), 400);
       }, duration);
+    },
+    setClearance: (level) => {
+      const valid = ['OPERATOR', 'EXECUTIVE', 'ROOT'];
+      if (!valid.includes(level)) return;
+      
+      const old = Atlas.state.clearance;
+      Atlas.state.clearance = level;
+      localStorage.setItem('atlas_clearance', level);
+      
+      if (old !== level) {
+        Atlas.notify(`CLEARANCE ELEVATED: ${level}`, 6000);
+        updateClearanceUI();
+        if (level === 'ROOT') applyRootTheme();
+      }
     }
   };
+
+  function updateClearanceUI() {
+    const el = document.getElementById('hud-session');
+    if (el) el.textContent = Atlas.state.clearance;
+    
+    const footer = document.querySelector('.hub-footer-strip span');
+    if (footer) {
+      footer.innerHTML = `<i class="ph-fill ph-user-circle"></i> operator@thesizcorp // ${Atlas.state.clearance}`;
+    }
+  }
+
+  function applyRootTheme() {
+    const root = document.documentElement;
+    root.style.setProperty('--red-neon', '#FFD700'); // Gold
+    root.style.setProperty('--red-glow', 'rgba(255, 215, 0, 0.4)');
+    root.style.setProperty('--red-crimson', '#DAA520');
+    Atlas.notify("SYSTEM OVERRIDE DETECTED. ENTRANCE GRANTED.", 8000);
+  }
 
   // =============================================================
   // DESKTOP INIT
@@ -114,6 +149,10 @@
     initDock();
     initHub();
     initContextMenu();
+
+    // Initialize Clearance UI
+    updateClearanceUI();
+    if (Atlas.state.clearance === 'ROOT') applyRootTheme();
 
     // Welcome notification
     setTimeout(() => {

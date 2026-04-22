@@ -79,6 +79,7 @@ const Apps = (() => {
           ['touch',    'Create a new file'],
           ['rm',       'Remove a file or folder'],
           ['sentinel', 'Interact with Siz-Sentinel'],
+          ['override', 'Elevate session clearance'],
           ['whoami',   'Print current user session'],
           ['neofetch', 'Display system info'],
           ['theme',    'Change UI intensity'],
@@ -100,11 +101,26 @@ const Apps = (() => {
         ];
         write('SENTINEL: ' + responses[Math.floor(Math.random() * responses.length)], 'accent');
       },
+      override: (args) => {
+        const key = args[0];
+        if (!key) return write('Usage: override <ACCESS_KEY>', 'err');
+        
+        if (key === "ORION_77") {
+          if (window.Atlas) window.Atlas.setClearance('EXECUTIVE');
+          write("ACCESS GRANTED: EXECUTIVE STATUS ACTIVATED.", "ok");
+        } else if (key === "VOID_OVERRIDE_00") {
+          if (window.Atlas) window.Atlas.setClearance('ROOT');
+          write("CRITICAL OVERRIDE: ROOT ACCESS GRANTED.", "ok");
+        } else {
+          write("ACCESS DENIED: INVALID KEY. Incident has been logged.", "err");
+          if (window.Atlas) window.Atlas.notify("UNAUTHORIZED OVERRIDE ATTEMPT DETECTED.", 3000);
+        }
+      },
       clear: () => {
         [...host.querySelectorAll('.term-line')].forEach(n => n.remove());
       },
       echo: (args) => write(args.join(' ')),
-      whoami: () => write('operator@atlas // clearance: EXECUTIVE', 'accent'),
+      whoami: () => write('operator@atlas // clearance: ' + (window.Atlas ? window.Atlas.state.clearance : 'OPERATOR'), 'accent'),
       date: () => write(new Date().toString(), 'sys'),
       ls: () => {
         const entries = VFS.ls(cwd);
@@ -197,7 +213,7 @@ const Apps = (() => {
           ['Uptime',   formatUptime((performance.now() - AtlasBootTime) / 1000)],
           ['Resolution', `${window.innerWidth}x${window.innerHeight}`],
           ['Theme',    'Midnight & Blood'],
-          ['Clearance','EXECUTIVE'],
+          ['Clearance', window.Atlas ? window.Atlas.state.clearance : 'OPERATOR'],
         ];
         const block = `<div class="neofetch-block"><div class="neofetch-art">${art}</div><div class="neofetch-info">` +
           info.map(([k,v]) => `<div><span class="k">${k.padEnd(10)}</span> <span class="v">${v}</span></div>`).join('') +
@@ -386,7 +402,7 @@ const Apps = (() => {
         ctx.shadowColor = color;
         ctx.shadowBlur = 10 * devicePixelRatio;
         ctx.stroke();
-        ctx.shadowBlur = 0;
+        childShadowBlur = 0;
       }
 
       function drawMiniChart(canvas, data, color) {
@@ -576,6 +592,7 @@ const Apps = (() => {
       { name: 'Logs', type: 'folder' },
       { name: 'ReadMe.txt', type: 'file', content: null }, // placeholder
       { name: 'manifest.atlas', type: 'file', content: 'ATLAS // Neuro-Link // Operator: itzzzshxdow' },
+      { name: 'encrypted_vault.txt', type: 'file', content: 'RESTRICTED DATA // SIZ-CORP ENCRYPTION v4.0\n\n[FILE BLOB: 0x48657850...]\n\nNOTICE: Accessing this file without Level 3 Clearance will trigger an automated trace.\n\nLOG_FRAGMENT:\n- EXEC_KEY: "ORION_77"\n- ROOT_KEY: "VOID_OVERRIDE_00"' },
     ],
     '/Documents': [
       { name: 'operator_notes.txt', type: 'file', content: 'Nothing to see here yet. The operator keeps their secrets close.' },
@@ -791,11 +808,15 @@ const Apps = (() => {
 
   function themeCycle() {
     const root = document.documentElement;
-    const current = (root.style.getPropertyValue('--red-neon') ||
-                     getComputedStyle(root).getPropertyValue('--red-neon')).trim();
-    if (current === '#8B0000') setTheme('mid');
-    else if (current === '#D2042D') setTheme('high');
-    else setTheme('low');
+    const current = getComputedStyle(root).getPropertyValue('--red-neon').trim().toUpperCase();
+    
+    if (current === '#8B0000' || current === 'RGB(139, 0, 0)') {
+      setTheme('mid');
+    } else if (current === '#D2042D' || current === 'RGB(210, 4, 45)') {
+      setTheme('high');
+    } else {
+      setTheme('low');
+    }
   }
 
   function setTheme(mode) {

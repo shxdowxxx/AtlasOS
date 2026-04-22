@@ -810,12 +810,104 @@ const Apps = (() => {
   }
 
   // =============================================================
+  // SENTINEL CHAT
+  // =============================================================
+  const SENTINEL_RESPONSES = {
+    hello:    ["Connection established. How can I assist you, Operator?", "Neuro-Link handshake complete. State your directive."],
+    hi:       ["Greetings, Operator. Sentinel online.", "Connection secured. What do you need?"],
+    status:   ["All systems nominal. Crimson Net signal: 100%. Neuro-Link: STABLE.", "Atlas grid is green. No anomalies detected in current session."],
+    help:     ["I can answer questions about system status, clearance levels, protocols, and active directives.", "Try asking about: status, clearance, protocol, files, or the Crimson Net."],
+    clearance:["Current session clearance is reported by your operator console. Use `override` in the terminal to elevate.", "OPERATOR → EXECUTIVE → ROOT. Each tier unlocks additional classified files and system access."],
+    protocol: ["PROTOCOL CRIMSON: All ingress logged. All egress encrypted. Trust nothing outside the shell.", "The Crimson Protocol is active. Sentinel nodes are monitoring all data streams."],
+    files:    ["Classified files require EXECUTIVE or ROOT clearance. Use `cat` in Atlas_CMD after elevating your session.", "The VFS holds several restricted entries. Elevate your clearance to access them."],
+    sentinel: ["I am SENTINEL — Atlas OS's neural intelligence layer. Encrypted, isolated, and loyal to the operator.", "Designation: SENTINEL. Purpose: secure operator advisory. Threat model: external only."],
+    root:     ["ROOT access is the highest clearance tier. Override key: VOID_OVERRIDE_00. Use with caution.", "ROOT clearance unlocks full kernel access. Exercise discretion."],
+    executive:["EXECUTIVE clearance is tier 2. Override key: ORION_77.", "Elevated to EXECUTIVE? You now have access to classified directives and the ops vault."],
+  };
+
+  function sentinelReply(input) {
+    const q = input.toLowerCase().trim();
+    for (const [key, replies] of Object.entries(SENTINEL_RESPONSES)) {
+      if (q.includes(key)) return replies[Math.floor(Math.random() * replies.length)];
+    }
+    const fallback = [
+      "Query logged. Insufficient data to generate a precise response.",
+      "I'm processing your request through the Neuro-Link. No direct match found in my knowledge lattice.",
+      "Interesting input, Operator. My current directives don't cover that domain.",
+      "Signal unclear. Rephrase your query for better pattern matching.",
+    ];
+    return fallback[Math.floor(Math.random() * fallback.length)];
+  }
+
+  function openSentinel() {
+    const root = el('div', { class: 'app-sentinel' });
+
+    const header = el('div', { class: 'sentinel-header' });
+    const icon = el('i', { class: 'ph-fill ph-cpu' });
+    const txt = el('div', { class: 'sentinel-header-text' });
+    const title = el('div', { class: 'sentinel-header-title' }); title.textContent = 'SENTINEL';
+    const sub = el('div', { class: 'sentinel-header-sub' }); sub.textContent = 'Neural Advisory Interface // Encrypted';
+    txt.append(title, sub);
+    const dot = el('div', { class: 'sentinel-status' });
+    header.append(icon, txt, dot);
+
+    const msgs = el('div', { class: 'sentinel-messages' });
+    const typing = el('div', { class: 'sentinel-typing' }); typing.textContent = 'SENTINEL is thinking...';
+
+    const inputRow = el('div', { class: 'sentinel-input-row' });
+    const input = el('input', { class: 'sentinel-input', type: 'text', placeholder: 'Send a message to SENTINEL...' });
+    const send = el('button', { class: 'sentinel-send' }); send.textContent = 'SEND';
+    inputRow.append(input, send);
+
+    root.append(header, msgs, typing, inputRow);
+
+    function addMsg(text, who) {
+      const wrap = el('div', { class: `sentinel-msg ${who}` });
+      const label = el('div', { class: 'sentinel-msg-label' });
+      label.textContent = who === 'user' ? 'OPERATOR' : 'SENTINEL';
+      const bubble = el('div', { class: 'sentinel-msg-bubble' });
+      bubble.textContent = text;
+      wrap.append(label, bubble);
+      msgs.insertBefore(wrap, typing);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function submit() {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      addMsg(text, 'user');
+      typing.classList.add('visible');
+      msgs.scrollTop = msgs.scrollHeight;
+      setTimeout(() => {
+        typing.classList.remove('visible');
+        addMsg(sentinelReply(text), 'ai');
+      }, 700 + Math.random() * 600);
+    }
+
+    send.addEventListener('click', submit);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+
+    // Boot greeting
+    setTimeout(() => addMsg("Sentinel online. Neuro-Link encrypted. How can I assist you, Operator?", 'ai'), 300);
+
+    return WM.create({
+      title: 'SENTINEL',
+      icon: 'ph-fill ph-cpu',
+      width: 500, height: 520,
+      content: root,
+      appKey: 'sentinel',
+      onFocus: () => input.focus(),
+    });
+  }
+
+  // =============================================================
   // LAUNCHER
   // =============================================================
   function launch(key, params = {}) {
     // Focus existing window if singleton app already open
     for (const d of WM.state.windows.values()) {
-      if (d.appKey === key && ['sysmonitor','files','sysinfo','browser'].includes(key)) {
+      if (d.appKey === key && ['sysmonitor','files','sysinfo','browser','sentinel'].includes(key)) {
         WM.focus(d.id);
         return d;
       }
@@ -827,6 +919,7 @@ const Apps = (() => {
       case 'files':      return openFiles();
       case 'notepad':    return openNotepad(params.title, params.content, params.onSave);
       case 'sysinfo':    return openSysInfo();
+      case 'sentinel':   return openSentinel();
     }
   }
 
@@ -862,7 +955,7 @@ const Apps = (() => {
   const _savedTheme = localStorage.getItem('atlas_theme');
   if (_savedTheme) setTheme(_savedTheme);
 
-  return { launch, openTerminal, openSysMonitor, openBrowser, openFiles, openNotepad, openSysInfo, themeCycle, setTheme, VFS };
+  return { launch, openTerminal, openSysMonitor, openBrowser, openFiles, openNotepad, openSysInfo, openSentinel, themeCycle, setTheme, VFS };
 })();
 
 // =============================================================

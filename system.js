@@ -617,6 +617,7 @@
     { app: 'notepad',    icon: 'ph ph-note-pencil',     label: 'Notepad' },
     { app: 'sysmonitor', icon: 'ph ph-pulse',           label: 'SysMonitor' },
     { app: 'sysinfo',    icon: 'ph ph-info',            label: 'Sys Info' },
+    { app: 'sentinel',   icon: 'ph-fill ph-cpu',        label: 'Sentinel' },
   ];
 
   function initDesktopIcons() {

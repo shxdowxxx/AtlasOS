@@ -149,6 +149,7 @@
     initDock();
     initHub();
     initContextMenu();
+    initDesktopIcons();
     initKeyboard();
 
     // Initialize Clearance UI
@@ -604,6 +605,61 @@
   }
   function hideContextMenu() {
     document.getElementById('context-menu').classList.add('hidden');
+  }
+
+  // =============================================================
+  // DESKTOP ICONS
+  // =============================================================
+  const DESK_ICONS = [
+    { app: 'terminal',   icon: 'ph ph-terminal-window', label: 'Atlas_CMD' },
+    { app: 'browser',    icon: 'ph ph-globe',           label: 'Nexus' },
+    { app: 'files',      icon: 'ph ph-folder',          label: 'Files' },
+    { app: 'notepad',    icon: 'ph ph-note-pencil',     label: 'Notepad' },
+    { app: 'sysmonitor', icon: 'ph ph-pulse',           label: 'SysMonitor' },
+    { app: 'sysinfo',    icon: 'ph ph-info',            label: 'Sys Info' },
+  ];
+
+  function initDesktopIcons() {
+    const grid = document.getElementById('desktop-icons');
+    let selected = null;
+
+    DESK_ICONS.forEach(({ app, icon, label }) => {
+      const btn = document.createElement('button');
+      btn.className = 'desk-icon';
+      btn.dataset.app = app;
+      btn.title = label;
+
+      const i = document.createElement('i');
+      i.className = icon;
+      const span = document.createElement('span');
+      span.textContent = label;
+
+      btn.appendChild(i);
+      btn.appendChild(span);
+
+      // Single click → select
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (selected && selected !== btn) selected.classList.remove('selected');
+        btn.classList.add('selected');
+        selected = btn;
+      });
+
+      // Double-click → launch
+      btn.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        Apps.launch(app);
+        btn.classList.remove('selected');
+        selected = null;
+      });
+
+      grid.appendChild(btn);
+    });
+
+    // Click on desktop clears selection
+    document.getElementById('desktop').addEventListener('click', () => {
+      if (selected) { selected.classList.remove('selected'); selected = null; }
+    });
   }
 
   // =============================================================

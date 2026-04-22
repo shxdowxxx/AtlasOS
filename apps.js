@@ -80,6 +80,7 @@ const Apps = (() => {
           ['rm',       'Remove a file or folder'],
           ['sentinel', 'Interact with Siz-Sentinel'],
           ['override', 'Elevate session clearance'],
+          ['screenshot', 'Capture current desktop'],
           ['whoami',   'Print current user session'],
           ['neofetch', 'Display system info'],
           ['theme',    'Change UI intensity'],
@@ -115,6 +116,28 @@ const Apps = (() => {
           write("ACCESS DENIED: INVALID KEY. Incident has been logged.", "err");
           if (window.Atlas) window.Atlas.notify("UNAUTHORIZED OVERRIDE ATTEMPT DETECTED.", 3000);
         }
+      },
+      screenshot: () => {
+        write('Initializing desktop capture...', 'sys');
+        if (typeof html2canvas === 'undefined') {
+          return write('screenshot: html2canvas module not loaded', 'err');
+        }
+        
+        const desktop = document.getElementById('desktop');
+        html2canvas(desktop, {
+          allowTaint: true,
+          useCORS: true,
+          scale: 1,
+        }).then(canvas => {
+          const link = document.createElement('a');
+          link.download = `atlas_os_capture_${Date.now()}.png`;
+          link.href = canvas.toDataURL();
+          link.click();
+          write('Desktop capture complete. File downloaded.', 'ok');
+          if (window.Atlas) window.Atlas.notify('DEKSTOP_CAPTURE: SUCCESS');
+        }).catch(err => {
+          write('screenshot: capture failed: ' + err, 'err');
+        });
       },
       clear: () => {
         [...host.querySelectorAll('.term-line')].forEach(n => n.remove());
@@ -274,6 +297,32 @@ const Apps = (() => {
           }
         }
         host.scrollTop = host.scrollHeight;
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        const val = input.value.trim();
+        const parts = val.split(/\s+/);
+        
+        if (parts.length === 1) {
+          // Autocomplete command
+          const cmdPart = parts[0];
+          const matches = Object.keys(COMMANDS).filter(k => k.startsWith(cmdPart));
+          if (matches.length === 1) {
+            input.value = matches[0] + ' ';
+          } else if (matches.length > 1) {
+            write('Matches: ' + matches.join('  '), 'sys');
+          }
+        } else {
+          // Autocomplete filename (last argument)
+          const filePart = parts[parts.length - 1];
+          const entries = VFS.ls(cwd).map(e => e.name);
+          const matches = entries.filter(n => n.startsWith(filePart));
+          if (matches.length === 1) {
+            parts[parts.length - 1] = matches[0];
+            input.value = parts.join(' ');
+          } else if (matches.length > 1) {
+            write('Matches: ' + matches.join('  '), 'sys');
+          }
+        }
       } else if (e.key === 'ArrowUp') {
         if (histIdx > 0) { histIdx--; input.value = history[histIdx] || ''; }
         e.preventDefault();
@@ -418,7 +467,7 @@ const Apps = (() => {
         ctx.shadowColor = color;
         ctx.shadowBlur = 10 * devicePixelRatio;
         ctx.stroke();
-        childShadowBlur = 0;
+        ctx.shadowBlur = 0;
       }
 
       function drawMiniChart(canvas, data, color) {
@@ -615,7 +664,7 @@ const Apps = (() => {
       { name: 'crimson_protocol.txt', type: 'file', content: 'PROTOCOL CRIMSON\n================\n\n1. All ingress is logged.\n2. All egress is encrypted.\n3. Trust nothing outside the shell.\n' },
     ],
     '/System': [
-      { name: 'kernel.atlas', type: 'file', clearance: 'ROOT', content: 'ATLAS KERNEL v1.0.0 // ROOT ACCESS\n================================\nCORE_HASH: 0xDEADBEEF_CAFEBABE\nINIT_VECTOR: 0xFF3131FF3131FF31\nSENTINEL_LINK: ACTIVE\nCRIMSON_NET: ENCRYPTED\n\n[CLASSIFIED: SIZ-CORP INTERNAL USE ONLY]' },
+      { name: 'kernel.atlas', type: 'file', clearance: 'ROOT', content: 'ATLAS KERNEL v1.0.0 // ROOT ACCESS\n==================================\nCORE_HASH: 0xDEADBEEF_CAFEBABE\nINIT_VECTOR: 0xFF3131FF3131FF31\nSENTINEL_LINK: ACTIVE\nCRIMSON_NET: ENCRYPTED\n\n[CLASSIFIED: SIZ-CORP INTERNAL USE ONLY]' },
       { name: 'ops_directive.sys', type: 'file', clearance: 'EXECUTIVE', content: 'DIRECTIVE // OPERATION: NIGHTFALL\n==================================\nPhase 1 — Establish Neuro-Link uplink\nPhase 2 — Deploy sentinel nodes\nPhase 3 — Engage Crimson Protocol\n\nAUTHORIZED BY: SIZ-CORP EXECUTIVE COUNCIL' },
       { name: 'config.json', type: 'file', content: '{\n  "theme": "midnight",\n  "accent": "#FF3131",\n  "operator": "itzzzshxdow"\n}' },
     ],
@@ -773,40 +822,6 @@ const Apps = (() => {
       width: 560, height: 420,
       content: root,
       appKey: 'notepad',
-    });
-  }
-
-  // =============================================================
-  // SYS INFO
-  // =============================================================
-  function openSysInfo() {
-    const root = el('div', { class: 'app-sysinfo' });
-    const rows = [
-      ['OPERATING SYSTEM', 'Atlas OS 1.0.0'],
-      ['CODE NAME', 'Neuro-Link'],
-      ['KERNEL', 'Atlas-midnight 6.6.6'],
-      ['OPERATOR', 'itzzzshxdow'],
-      ['CLEARANCE', 'EXECUTIVE'],
-      ['SHELL', 'Neuro-Link CMD'],
-      ['THEME', 'Midnight & Blood'],
-      ['RESOLUTION', `${window.innerWidth} x ${window.innerHeight}`],
-      ['USER AGENT', navigator.userAgent],
-      ['PLATFORM', navigator.platform],
-      ['LANGUAGE', navigator.language],
-      ['CPU CORES', navigator.hardwareConcurrency || '—'],
-      ['MEMORY (reported)', (navigator.deviceMemory || '?') + ' GB'],
-      ['UPTIME', formatUptime((performance.now() - AtlasBootTime) / 1000)],
-    ];
-    root.innerHTML = `
-      <div class="sysinfo-header">SYSTEM INFORMATION</div>
-      ${rows.map(([k, v]) => `<div class="sysinfo-row"><div class="sysinfo-k">${k}</div><div class="sysinfo-v">${v}</div></div>`).join('')}
-    `;
-    return WM.create({
-      title: 'SYSTEM INFO',
-      icon: 'ph ph-info',
-      width: 560, height: 520,
-      content: root,
-      appKey: 'sysinfo',
     });
   }
 
@@ -1106,6 +1121,40 @@ const Apps = (() => {
       width: 540, height: 460,
       content: root,
       appKey: 'settings',
+    });
+  }
+
+  // =============================================================
+  // SYS INFO
+  // =============================================================
+  function openSysInfo() {
+    const root = el('div', { class: 'app-sysinfo' });
+    const rows = [
+      ['OPERATING SYSTEM', 'Atlas OS 1.0.0'],
+      ['CODE NAME', 'Neuro-Link'],
+      ['KERNEL', 'Atlas-midnight 6.6.6'],
+      ['OPERATOR', localStorage.getItem('atlas_operator') || 'itzzzshxdow'],
+      ['CLEARANCE', window.Atlas ? window.Atlas.state.clearance : 'EXECUTIVE'],
+      ['SHELL', 'Neuro-Link CMD'],
+      ['THEME', 'Midnight & Blood'],
+      ['RESOLUTION', `${window.innerWidth} x ${window.innerHeight}`],
+      ['USER AGENT', navigator.userAgent],
+      ['PLATFORM', navigator.platform],
+      ['LANGUAGE', navigator.language],
+      ['CPU CORES', navigator.hardwareConcurrency || '—'],
+      ['MEMORY (reported)', (navigator.deviceMemory || '?') + ' GB'],
+      ['UPTIME', formatUptime((performance.now() - AtlasBootTime) / 1000)],
+    ];
+    root.innerHTML = `
+      <div class="sysinfo-header">SYSTEM INFORMATION</div>
+      ${rows.map(([k, v]) => `<div class="sysinfo-row"><div class="sysinfo-k">${k}</div><div class="sysinfo-v">${v}</div></div>`).join('')}
+    `;
+    return WM.create({
+      title: 'SYSTEM INFO',
+      icon: 'ph ph-info',
+      width: 560, height: 520,
+      content: root,
+      appKey: 'sysinfo',
     });
   }
 

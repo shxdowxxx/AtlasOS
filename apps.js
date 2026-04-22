@@ -125,9 +125,16 @@ const Apps = (() => {
       ls: () => {
         const entries = VFS.ls(cwd);
         if (entries.length === 0) return;
+        const levels = ['OPERATOR', 'EXECUTIVE', 'ROOT'];
+        const userLevel = levels.indexOf(window.Atlas ? window.Atlas.state.clearance : 'OPERATOR');
         const html = entries.map(e => {
-          const color = e.type === 'folder' ? '#fbbf24' : 'var(--text-primary)';
-          return `<span style="color:${color}">${e.name}${e.type === 'folder' ? '/' : ''}</span>`;
+          if (e.type === 'folder') {
+            return `<span style="color:#fbbf24">${e.name}/</span>`;
+          }
+          const locked = e.clearance && levels.indexOf(e.clearance) > userLevel;
+          const color = locked ? 'var(--red-crimson)' : 'var(--text-primary)';
+          const lock  = locked ? ' 🔒' : '';
+          return `<span style="color:${color}">${e.name}${lock}</span>`;
         }).join('  ');
         writeHTML(html);
       },
@@ -154,7 +161,15 @@ const Apps = (() => {
         if (!name) return write('cat: missing filename', 'err');
         const entry = VFS.resolve(cwd, name);
         if (entry && entry.type === 'file') {
-          write(entry.content || '', 'sys');
+          const levels = ['OPERATOR', 'EXECUTIVE', 'ROOT'];
+          const userLevel = levels.indexOf(window.Atlas ? window.Atlas.state.clearance : 'OPERATOR');
+          const reqLevel  = levels.indexOf(entry.clearance || 'OPERATOR');
+          if (userLevel < reqLevel) {
+            write(`ACCESS DENIED — ${entry.clearance} clearance required.`, 'err');
+            write(`Run: override <key>  to elevate session.`, 'sys');
+          } else {
+            write(entry.content || '', 'sys');
+          }
         } else {
           write(`cat: ${name}: No such file`, 'err');
         }
@@ -592,14 +607,15 @@ const Apps = (() => {
       { name: 'Logs', type: 'folder' },
       { name: 'ReadMe.txt', type: 'file', content: null }, // placeholder
       { name: 'manifest.atlas', type: 'file', content: 'ATLAS // Neuro-Link // Operator: itzzzshxdow' },
-      { name: 'encrypted_vault.txt', type: 'file', content: 'RESTRICTED DATA // SIZ-CORP ENCRYPTION v4.0\n\n[FILE BLOB: 0x48657850...]\n\nNOTICE: Accessing this file without Level 3 Clearance will trigger an automated trace.\n\nLOG_FRAGMENT:\n- EXEC_KEY: "ORION_77"\n- ROOT_KEY: "VOID_OVERRIDE_00"' },
+      { name: 'encrypted_vault.txt', type: 'file', clearance: 'EXECUTIVE', content: 'RESTRICTED DATA // SIZ-CORP ENCRYPTION v4.0\n\n[FILE BLOB: 0x48657850...]\n\nNOTICE: This file is classified EXECUTIVE-level.\n\nLOG_FRAGMENT:\n- EXEC_KEY: "ORION_77"\n- ROOT_KEY: "VOID_OVERRIDE_00"\n- SENTINEL_NODE: ONLINE' },
     ],
     '/Documents': [
       { name: 'operator_notes.txt', type: 'file', content: 'Nothing to see here yet. The operator keeps their secrets close.' },
       { name: 'crimson_protocol.txt', type: 'file', content: 'PROTOCOL CRIMSON\n================\n\n1. All ingress is logged.\n2. All egress is encrypted.\n3. Trust nothing outside the shell.\n' },
     ],
     '/System': [
-      { name: 'kernel.atlas', type: 'file', content: '[BINARY BLOB — access denied without EXECUTIVE clearance]' },
+      { name: 'kernel.atlas', type: 'file', clearance: 'ROOT', content: 'ATLAS KERNEL v1.0.0 // ROOT ACCESS\n================================\nCORE_HASH: 0xDEADBEEF_CAFEBABE\nINIT_VECTOR: 0xFF3131FF3131FF31\nSENTINEL_LINK: ACTIVE\nCRIMSON_NET: ENCRYPTED\n\n[CLASSIFIED: SIZ-CORP INTERNAL USE ONLY]' },
+      { name: 'ops_directive.sys', type: 'file', clearance: 'EXECUTIVE', content: 'DIRECTIVE // OPERATION: NIGHTFALL\n==================================\nPhase 1 — Establish Neuro-Link uplink\nPhase 2 — Deploy sentinel nodes\nPhase 3 — Engage Crimson Protocol\n\nAUTHORIZED BY: SIZ-CORP EXECUTIVE COUNCIL' },
       { name: 'config.json', type: 'file', content: '{\n  "theme": "midnight",\n  "accent": "#FF3131",\n  "operator": "itzzzshxdow"\n}' },
     ],
     '/Logs': [
@@ -608,7 +624,15 @@ const Apps = (() => {
   };
 
   const VFS = {
-    data: JSON.parse(localStorage.getItem('atlas_vfs')) || DEFAULT_FS,
+    data: (() => {
+      // Version bump: clear stale VFS that predates clearance gating
+      const VFS_VERSION = '2';
+      if (localStorage.getItem('atlas_vfs_ver') !== VFS_VERSION) {
+        localStorage.removeItem('atlas_vfs');
+        localStorage.setItem('atlas_vfs_ver', VFS_VERSION);
+      }
+      return JSON.parse(localStorage.getItem('atlas_vfs')) || DEFAULT_FS;
+    })(),
     save() {
       localStorage.setItem('atlas_vfs', JSON.stringify(this.data));
     },

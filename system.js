@@ -171,7 +171,7 @@
   // WALLPAPER — Canvas animated background
   // =============================================================
   const WALLPAPERS = ['grid', 'particles', 'blackhole'];
-  let wallpaperMode = 'grid';
+  let wallpaperMode = localStorage.getItem('atlas_wallpaper') || 'grid';
 
   function initWallpaper() {
     const canvas = document.getElementById('wallpaper');
@@ -331,6 +331,14 @@
   function cycleWallpaper() {
     const idx = WALLPAPERS.indexOf(wallpaperMode);
     wallpaperMode = WALLPAPERS[(idx + 1) % WALLPAPERS.length];
+    localStorage.setItem('atlas_wallpaper', wallpaperMode);
+  }
+
+  function setWallpaper(mode) {
+    if (WALLPAPERS.includes(mode)) {
+      wallpaperMode = mode;
+      localStorage.setItem('atlas_wallpaper', mode);
+    }
   }
 
   // =============================================================
@@ -538,6 +546,8 @@
   }
 
   window.Atlas.hideHub = hideHub;
+  window.Atlas.setWallpaper = setWallpaper;
+  window.Atlas.WALLPAPERS = WALLPAPERS;
   function toggleHub() {
     const hub = document.getElementById('atlas-hub');
     hub.classList.toggle('hidden');

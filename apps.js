@@ -831,9 +831,14 @@ const Apps = (() => {
       root.style.setProperty('--red-neon', '#FF3131');
       root.style.setProperty('--red-glow', 'rgba(255,49,49,0.45)');
     }
+    localStorage.setItem('atlas_theme', mode);
   }
 
-  return { launch, openTerminal, openSysMonitor, openBrowser, openFiles, openNotepad, openSysInfo, themeCycle, VFS };
+  // Restore persisted theme on load
+  const _savedTheme = localStorage.getItem('atlas_theme');
+  if (_savedTheme) setTheme(_savedTheme);
+
+  return { launch, openTerminal, openSysMonitor, openBrowser, openFiles, openNotepad, openSysInfo, themeCycle, setTheme, VFS };
 })();
 
 // =============================================================

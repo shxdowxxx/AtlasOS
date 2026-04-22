@@ -65,17 +65,63 @@
   }
 
   // =============================================================
+  // ATLAS GLOBAL API
+  // =============================================================
+  window.Atlas = {
+    notify: (msg, duration = 5000) => {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `
+        <div class="toast-header">
+          <span>DIRECTIVE // UN-RELAY</span>
+          <i class="ph ph-warning-octagon"></i>
+        </div>
+        <div class="toast-body">${msg}</div>
+        <div class="toast-progress"></div>
+      `;
+
+      container.appendChild(toast);
+      
+      // Trigger animation
+      setTimeout(() => toast.classList.add('visible'), 10);
+
+      const progress = toast.querySelector('.toast-progress');
+      progress.style.transition = `transform ${duration}ms linear`;
+      progress.style.transform = 'scaleX(0)';
+
+      setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 400);
+      }, duration);
+    }
+  };
+
+  // =============================================================
   // DESKTOP INIT
   // =============================================================
   function initDesktop() {
+    // Create toast container
+    const tc = document.createElement('div');
+    tc.id = 'toast-container';
+    tc.className = 'toast-container';
+    document.getElementById('desktop').appendChild(tc);
+
     initWallpaper();
     initHUD();
     initDock();
     initHub();
     initContextMenu();
 
+    // Welcome notification
+    setTimeout(() => {
+      Atlas.notify("Session established. Neuro-Link connection stable.", 6000);
+    }, 1500);
+
     // Seed with a welcome terminal
-    setTimeout(() => Apps.launch('terminal'), 400);
+    setTimeout(() => Apps.launch('terminal'), 800);
 
     // Session id
     document.getElementById('hud-session').textContent =
@@ -323,7 +369,24 @@
   function initHub() {
     const hub = document.getElementById('atlas-hub');
     const searchInput = document.getElementById('hub-search');
+    const hubMain = hub.querySelector('.hub-main');
     
+    // Create results container
+    const resultsContainer = document.createElement('div');
+    resultsContainer.className = 'hub-results hidden';
+    hubMain.appendChild(resultsContainer);
+
+    function showResults(html) {
+      resultsContainer.innerHTML = html;
+      resultsContainer.classList.remove('hidden');
+      hub.querySelectorAll('.hub-tile, .hub-section-label, .hub-grid, .hub-options').forEach(el => el.classList.add('hidden'));
+    }
+
+    function hideResults() {
+      resultsContainer.classList.add('hidden');
+      hub.querySelectorAll('.hub-tile, .hub-section-label, .hub-grid, .hub-options').forEach(el => el.classList.remove('hidden'));
+    }
+
     hub.querySelectorAll('.hub-tile').forEach(tile => {
       tile.addEventListener('click', () => {
         Apps.launch(tile.dataset.app);
@@ -334,11 +397,68 @@
     // Search functionality
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
-        const q = e.target.value.toLowerCase();
-        hub.querySelectorAll('.hub-tile').forEach(tile => {
-          const name = tile.querySelector('span').textContent.toLowerCase();
-          tile.style.display = name.includes(q) ? '' : 'none';
+        const q = e.target.value.toLowerCase().trim();
+        if (!q) {
+          hideResults();
+          return;
+        }
+
+        const results = [];
+        
+        // 1. Search Apps
+        const apps = [
+          { name: 'Terminal', key: 'terminal', icon: 'ph ph-terminal-window' },
+          { name: 'System Monitor', key: 'sysmonitor', icon: 'ph ph-pulse' },
+          { name: 'Nexus Browser', key: 'browser', icon: 'ph ph-globe' },
+          { name: 'File System', key: 'files', icon: 'ph ph-folder' },
+          { name: 'Notepad', key: 'notepad', icon: 'ph ph-note-pencil' },
+          { name: 'System Info', key: 'sysinfo', icon: 'ph ph-info' },
+        ];
+        apps.forEach(a => {
+          if (a.name.toLowerCase().includes(q)) {
+            results.push(`<div class="search-result" onclick="Apps.launch('${a.key}'); Atlas.hideHub()">
+              <i class="${a.icon}"></i>
+              <span>App: ${a.name}</span>
+            </div>`);
+          }
         });
+
+        // 2. Search VFS
+        if (Apps.VFS) {
+          Object.entries(Apps.VFS.data).forEach(([path, entries]) => {
+            entries.forEach(entry => {
+              if (entry.name.toLowerCase().includes(q)) {
+                const fullPath = path === '/' ? '/' + entry.name : path + '/' + entry.name;
+                const icon = entry.type === 'folder' ? 'ph ph-folder' : 'ph ph-file-text';
+                results.push(`<div class="search-result" onclick="Apps.launch('${entry.type === 'folder' ? 'files' : 'notepad'}', {title: '${entry.name}', content: \`${(entry.content || '').replace(/`/g, '\\`')}\`}); Atlas.hideHub()">
+                  <i class="${icon}"></i>
+                  <span>File: ${fullPath}</span>
+                </div>`);
+              }
+            });
+          });
+        }
+
+        // 3. Quick Actions
+        const actions = [
+          { name: 'Reboot System', action: () => location.reload(), icon: 'ph ph-arrow-clockwise' },
+          { name: 'Change Wallpaper', action: () => cycleWallpaper(), icon: 'ph ph-image' },
+          { name: 'Cycle Theme', action: () => Apps.themeCycle(), icon: 'ph ph-palette' },
+        ];
+        actions.forEach(a => {
+          if (a.name.toLowerCase().includes(q)) {
+            results.push(`<div class="search-result action" onclick="Atlas.notify('Executing: ${a.name}'); Atlas.executeAction('${a.name}')">
+              <i class="${a.icon}"></i>
+              <span>Action: ${a.name}</span>
+            </div>`);
+          }
+        });
+
+        if (results.length > 0) {
+          showResults(results.join(''));
+        } else {
+          showResults(`<div class="search-no-results">No matches found for "${q}"</div>`);
+        }
       });
     }
 
@@ -364,6 +484,13 @@
       hideHub();
     });
   }
+
+  window.Atlas.hideHub = hideHub;
+  window.Atlas.executeAction = (name) => {
+    if (name === 'Reboot System') location.reload();
+    if (name === 'Change Wallpaper') cycleWallpaper();
+    if (name === 'Cycle Theme') Apps.themeCycle();
+  };
   function toggleHub() {
     const hub = document.getElementById('atlas-hub');
     hub.classList.toggle('hidden');

@@ -51,9 +51,11 @@ const Apps = (() => {
       host.scrollTop = host.scrollHeight;
     }
 
+    let cwd = '/';
+    const prompt = el('span', { class: 'term-prompt' }, 'operator@atlas:~$');
     const input = el('input', { class: 'term-input', spellcheck: 'false', autocomplete: 'off' });
     const inputLine = el('div', { class: 'term-input-line' }, [
-      el('span', { class: 'term-prompt' }, 'operator@atlas:~$'),
+      prompt,
       input,
     ]);
 
@@ -70,16 +72,33 @@ const Apps = (() => {
         const rows = [
           ['help',     'List all commands'],
           ['clear',    'Clear the terminal buffer'],
-          ['echo',     'Print arguments to stdout'],
-          ['whoami',   'Print the active session user'],
-          ['neofetch', 'Display system summary with ATLAS art'],
-          ['theme',    'Toggle red accent intensity (low|mid|high)'],
-          ['date',     'Print current system date/time'],
-          ['ls',       'List virtual file system'],
-          ['cat',      'Show contents of a virtual file'],
-          ['reboot',   'Restart Atlas OS'],
+          ['ls',       'List directory contents'],
+          ['cd',       'Change directory'],
+          ['cat',      'Read file content'],
+          ['mkdir',    'Create a new folder'],
+          ['touch',    'Create a new file'],
+          ['rm',       'Remove a file or folder'],
+          ['sentinel', 'Interact with Siz-Sentinel'],
+          ['whoami',   'Print current user session'],
+          ['neofetch', 'Display system info'],
+          ['theme',    'Change UI intensity'],
+          ['date',     'Print system time'],
+          ['reboot',   'Restart simulation'],
         ];
         rows.forEach(([k, v]) => writeHTML(`  <span style="color:var(--red-neon)">${k.padEnd(10)}</span> <span style="color:var(--text-secondary)">${v}</span>`));
+      },
+      sentinel: (args) => {
+        const msg = args.join(' ').toLowerCase();
+        if (!msg) return write('SENTINEL: State your inquiry, Operator.', 'accent');
+        const responses = [
+          "Your query has been logged. Corporate review pending.",
+          "That information is restricted to Level 5 Executives.",
+          "TheSizCorporation values your curiosity. Please return to your assigned tasks.",
+          "Observations suggest your focus is drifting. Corrective measures available.",
+          "Simulation stability: 98.4%. No cause for concern.",
+          "I am watching. I am always watching."
+        ];
+        write('SENTINEL: ' + responses[Math.floor(Math.random() * responses.length)], 'accent');
       },
       clear: () => {
         [...host.querySelectorAll('.term-line')].forEach(n => n.remove());
@@ -88,17 +107,64 @@ const Apps = (() => {
       whoami: () => write('operator@atlas // clearance: EXECUTIVE', 'accent'),
       date: () => write(new Date().toString(), 'sys'),
       ls: () => {
-        writeHTML(`<span style="color:#fbbf24">Documents/</span>  <span style="color:#fbbf24">System/</span>  <span style="color:#fbbf24">Logs/</span>  <span style="color:var(--text-primary)">ReadMe.txt</span>  <span style="color:var(--text-primary)">manifest.atlas</span>`);
+        const entries = VFS.ls(cwd);
+        if (entries.length === 0) return;
+        const html = entries.map(e => {
+          const color = e.type === 'folder' ? '#fbbf24' : 'var(--text-primary)';
+          return `<span style="color:${color}">${e.name}${e.type === 'folder' ? '/' : ''}</span>`;
+        }).join('  ');
+        writeHTML(html);
+      },
+      cd: (args) => {
+        const target = args[0];
+        if (!target || target === '~') { cwd = '/'; }
+        else if (target === '..') {
+          if (cwd === '/') return;
+          const parts = cwd.split('/').filter(Boolean);
+          parts.pop();
+          cwd = '/' + parts.join('/');
+        } else {
+          const entry = VFS.resolve(cwd, target);
+          if (entry && entry.type === 'folder') {
+            cwd = cwd === '/' ? '/' + target : cwd + '/' + target;
+          } else {
+            write(`cd: ${target}: No such directory`, 'err');
+          }
+        }
+        prompt.textContent = `operator@atlas:${cwd === '/' ? '~' : cwd}$`;
       },
       cat: (args) => {
-        const file = args[0];
-        if (!file) return write('cat: missing filename', 'err');
-        if (file === 'ReadMe.txt') {
-          write(AtlasLore.readme, 'sys');
-        } else if (file === 'manifest.atlas') {
-          write('ATLAS // Midnight Shell // Operator: itzzzshxdow', 'accent');
+        const name = args[0];
+        if (!name) return write('cat: missing filename', 'err');
+        const entry = VFS.resolve(cwd, name);
+        if (entry && entry.type === 'file') {
+          write(entry.content || '', 'sys');
         } else {
-          write(`cat: ${file}: No such file`, 'err');
+          write(`cat: ${name}: No such file`, 'err');
+        }
+      },
+      mkdir: (args) => {
+        const name = args[0];
+        if (!name) return write('mkdir: missing operand', 'err');
+        if (VFS.mkdir(cwd, name)) {
+          write(`Directory created: ${name}`, 'ok');
+        } else {
+          write(`mkdir: cannot create directory '${name}': File exists`, 'err');
+        }
+      },
+      touch: (args) => {
+        const name = args[0];
+        if (!name) return write('touch: missing operand', 'err');
+        VFS.touch(cwd, name, '');
+        write(`File created: ${name}`, 'ok');
+      },
+      rm: (args) => {
+        const name = args[0];
+        if (!name) return write('rm: missing operand', 'err');
+        if (VFS.rm(cwd, name)) {
+          write(`Removed: ${name}`, 'ok');
+        } else {
+          write(`rm: cannot remove '${name}': No such file or directory`, 'err');
         }
       },
       reboot: () => {
@@ -107,22 +173,9 @@ const Apps = (() => {
       },
       theme: (args) => {
         const mode = args[0];
-        const root = document.documentElement;
-        if (mode === 'low') {
-          root.style.setProperty('--red-neon', '#8B0000');
-          root.style.setProperty('--red-glow', 'rgba(139,0,0,0.3)');
-          write('Theme set to LOW intensity.', 'sys');
-        } else if (mode === 'mid') {
-          root.style.setProperty('--red-neon', '#D2042D');
-          root.style.setProperty('--red-glow', 'rgba(210,4,45,0.4)');
-          write('Theme set to MID intensity.', 'sys');
-        } else if (mode === 'high') {
-          root.style.setProperty('--red-neon', '#FF3131');
-          root.style.setProperty('--red-glow', 'rgba(255,49,49,0.45)');
-          write('Theme set to HIGH intensity.', 'sys');
-        } else {
-          write('Usage: theme <low|mid|high>', 'err');
-        }
+        if (!['low', 'mid', 'high'].includes(mode)) return write('Usage: theme <low|mid|high>', 'err');
+        setTheme(mode);
+        write(`Theme set to ${mode.toUpperCase()} intensity.`, 'sys');
       },
       neofetch: () => {
         const art = [
@@ -140,13 +193,10 @@ const Apps = (() => {
           ['OS',       'Atlas OS 1.0.0 x86_64'],
           ['Host',     'Atlas Mainframe'],
           ['Kernel',   'Atlas-midnight 6.6.6'],
-          ['Shell',    'atlas_cmd'],
+          ['Shell',    'Neuro-Link CMD'],
           ['Uptime',   formatUptime((performance.now() - AtlasBootTime) / 1000)],
           ['Resolution', `${window.innerWidth}x${window.innerHeight}`],
           ['Theme',    'Midnight & Blood'],
-          ['CPU',      'Atlas-Core @ 6.66GHz (16)'],
-          ['GPU',      'Crimson RTX 5090'],
-          ['Memory',   `${(512 + Math.floor(Math.random()*512))}MiB / 32768MiB`],
           ['Clearance','EXECUTIVE'],
         ];
         const block = `<div class="neofetch-block"><div class="neofetch-art">${art}</div><div class="neofetch-info">` +
@@ -155,6 +205,24 @@ const Apps = (() => {
         writeHTML(block);
       },
     };
+
+    const OBSERVATIONS = [
+      "NOTICE: Network packet 0x6F2A intercepted and scrubbed.",
+      "OBSERVATION: Operator pulse rate stable. Efficiency optimal.",
+      "SYSTEM: Purging temp_buffer cache... OK.",
+      "SENTINEL: TheSizCorporation reminds you: Curiosity is a Level 2 Risk.",
+      "ALERT: Unauthorized port scan detected on node 127.0.0.1. Handled.",
+      "NOTICE: Session encrypted. Neuro-Link signal at 100%."
+    ];
+    const sentinelInterval = setInterval(() => {
+      if (!document.body.contains(host)) {
+        clearInterval(sentinelInterval);
+        return;
+      }
+      if (Math.random() > 0.85) {
+        write('SENTINEL: ' + OBSERVATIONS[Math.floor(Math.random() * OBSERVATIONS.length)], 'accent');
+      }
+    }, 15000);
 
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -447,15 +515,15 @@ const Apps = (() => {
   }
 
   // =============================================================
-  // FILE SYSTEM
+  // VFS — Persistent Virtual File System
   // =============================================================
-  const FS = {
+  const DEFAULT_FS = {
     '/': [
       { name: 'Documents', type: 'folder' },
       { name: 'System', type: 'folder' },
       { name: 'Logs', type: 'folder' },
-      { name: 'ReadMe.txt', type: 'file', content: null }, // filled below
-      { name: 'manifest.atlas', type: 'file', content: 'ATLAS // Midnight Shell // Operator: itzzzshxdow' },
+      { name: 'ReadMe.txt', type: 'file', content: null }, // placeholder
+      { name: 'manifest.atlas', type: 'file', content: 'ATLAS // Neuro-Link // Operator: itzzzshxdow' },
     ],
     '/Documents': [
       { name: 'operator_notes.txt', type: 'file', content: 'Nothing to see here yet. The operator keeps their secrets close.' },
@@ -470,6 +538,51 @@ const Apps = (() => {
     ],
   };
 
+  const VFS = {
+    data: JSON.parse(localStorage.getItem('atlas_vfs')) || DEFAULT_FS,
+    save() {
+      localStorage.setItem('atlas_vfs', JSON.stringify(this.data));
+    },
+    ls(path) {
+      return this.data[path] || [];
+    },
+    resolve(cwd, name) {
+      const entries = this.ls(cwd);
+      return entries.find(e => e.name === name);
+    },
+    mkdir(cwd, name) {
+      if (this.resolve(cwd, name)) return false;
+      this.data[cwd].push({ name, type: 'folder' });
+      const newPath = cwd === '/' ? '/' + name : cwd + '/' + name;
+      this.data[newPath] = [];
+      this.save();
+      return true;
+    },
+    touch(cwd, name, content = '') {
+      const existing = this.resolve(cwd, name);
+      if (existing) {
+        existing.content = content;
+      } else {
+        this.data[cwd].push({ name, type: 'file', content });
+      }
+      this.save();
+      return true;
+    },
+    rm(cwd, name) {
+      const entries = this.ls(cwd);
+      const idx = entries.findIndex(e => e.name === name);
+      if (idx === -1) return false;
+      const entry = entries[idx];
+      if (entry.type === 'folder') {
+        const fullPath = cwd === '/' ? '/' + name : cwd + '/' + name;
+        delete this.data[fullPath];
+      }
+      entries.splice(idx, 1);
+      this.save();
+      return true;
+    }
+  };
+
   function openFiles() {
     const root = el('div', { class: 'app-files' });
     let cwd = '/';
@@ -479,12 +592,12 @@ const Apps = (() => {
         <div class="files-toolbar">
           <button class="browser-btn" id="files-up" ${cwd === '/' ? 'disabled' : ''}><i class="ph ph-caret-left"></i></button>
           <span>PATH:</span>
-          <span class="files-path">atlas:/${cwd === '/' ? '' : cwd.slice(1)}</span>
+          <span class="files-path">atlas:${cwd}</span>
         </div>
         <div class="files-grid"></div>
       `;
       const grid = root.querySelector('.files-grid');
-      const entries = FS[cwd] || [];
+      const entries = VFS.ls(cwd);
       entries.forEach(entry => {
         const iconCls = entry.type === 'folder' ? 'folder' : 'file';
         const iconName = entry.type === 'folder' ? 'ph-fill ph-folder-simple' :
@@ -501,7 +614,10 @@ const Apps = (() => {
             cwd = cwd === '/' ? '/' + entry.name : cwd + '/' + entry.name;
             render();
           } else {
-            openNotepad(entry.name, entry.content || AtlasLore.readme);
+            openNotepad(entry.name, entry.content, (newContent) => {
+              VFS.touch(cwd, entry.name, newContent);
+              render();
+            });
           }
         });
         grid.appendChild(item);
@@ -511,14 +627,17 @@ const Apps = (() => {
         const parts = cwd.split('/').filter(Boolean);
         parts.pop();
         cwd = '/' + parts.join('/');
-        if (cwd === '/') cwd = '/';
         render();
       });
     }
 
-    // Fill readme lazily
-    const readme = FS['/'].find(x => x.name === 'ReadMe.txt');
-    if (readme && !readme.content) readme.content = AtlasLore.readme;
+    // Lazy load readme if not set
+    const rootFiles = VFS.ls('/');
+    const readme = rootFiles.find(f => f.name === 'ReadMe.txt');
+    if (readme && !readme.content) {
+      readme.content = AtlasLore.readme;
+      VFS.save();
+    }
 
     render();
 
@@ -535,13 +654,25 @@ const Apps = (() => {
   // =============================================================
   // NOTEPAD
   // =============================================================
-  function openNotepad(title = 'untitled.txt', content = '') {
+  function openNotepad(title = 'untitled.txt', content = '', onSave) {
     const root = el('div', { class: 'app-notepad' });
-    root.innerHTML = `
-      <div class="notepad-toolbar">ATLAS // NOTEPAD — ${escapeHTML(title)}</div>
-      <textarea class="notepad-body" spellcheck="false"></textarea>
-    `;
-    root.querySelector('textarea').value = content;
+    const area = el('textarea', { class: 'notepad-body', spellcheck: 'false' });
+    area.value = content;
+
+    const saveBtn = el('button', { class: 'browser-btn', title: 'Save File' }, [el('i', { class: 'ph ph-floppy-disk' })]);
+    saveBtn.onclick = () => {
+      if (onSave) onSave(area.value);
+      if (window.Atlas) window.Atlas.notify(`File saved: ${title}`);
+    };
+
+    const toolbar = el('div', { class: 'notepad-toolbar' }, [
+      el('span', {}, `ATLAS // NOTEPAD — ${title}`),
+      saveBtn
+    ]);
+
+    root.appendChild(toolbar);
+    root.appendChild(area);
+
     return WM.create({
       title: `NOTEPAD — ${title}`,
       icon: 'ph ph-note-pencil',
@@ -558,11 +689,11 @@ const Apps = (() => {
     const root = el('div', { class: 'app-sysinfo' });
     const rows = [
       ['OPERATING SYSTEM', 'Atlas OS 1.0.0'],
-      ['CODE NAME', 'Midnight Shell'],
+      ['CODE NAME', 'Neuro-Link'],
       ['KERNEL', 'Atlas-midnight 6.6.6'],
       ['OPERATOR', 'itzzzshxdow'],
       ['CLEARANCE', 'EXECUTIVE'],
-      ['SHELL', 'atlas_cmd'],
+      ['SHELL', 'Neuro-Link CMD'],
       ['THEME', 'Midnight & Blood'],
       ['RESOLUTION', `${window.innerWidth} x ${window.innerHeight}`],
       ['USER AGENT', navigator.userAgent],
@@ -588,7 +719,7 @@ const Apps = (() => {
   // =============================================================
   // LAUNCHER
   // =============================================================
-  function launch(key) {
+  function launch(key, params = {}) {
     // Focus existing window if singleton app already open
     for (const d of WM.state.windows.values()) {
       if (d.appKey === key && ['sysmonitor','files','sysinfo','browser'].includes(key)) {
@@ -599,42 +730,14 @@ const Apps = (() => {
     switch (key) {
       case 'terminal':   return openTerminal();
       case 'sysmonitor': return openSysMonitor();
-      case 'browser':    return openBrowser();
+      case 'browser':    return openBrowser(params.url);
       case 'files':      return openFiles();
-      case 'notepad':    return openNotepad();
+      case 'notepad':    return openNotepad(params.title, params.content, params.onSave);
       case 'sysinfo':    return openSysInfo();
     }
   }
 
-  function themeCycle() {
-    const root = document.documentElement;
-    const current = getComputedStyle(root).getPropertyValue('--red-neon').trim().toUpperCase();
-    if (current === '#8B0000') launch('terminal').then(() => COMMANDS.theme(['mid'])); // Wait, launch returns win
-    // Simpler logic for the Hub:
-    if (current === '#8B0000' || current === 'RGB(139, 0, 0)') {
-      setTheme('mid');
-    } else if (current === '#D2042D' || current === 'RGB(210, 4, 45)') {
-      setTheme('high');
-    } else {
-      setTheme('low');
-    }
-  }
-
-  function setTheme(mode) {
-    const root = document.documentElement;
-    if (mode === 'low') {
-      root.style.setProperty('--red-neon', '#8B0000');
-      root.style.setProperty('--red-glow', 'rgba(139,0,0,0.3)');
-    } else if (mode === 'mid') {
-      root.style.setProperty('--red-neon', '#D2042D');
-      root.style.setProperty('--red-glow', 'rgba(210,4,45,0.4)');
-    } else if (mode === 'high') {
-      root.style.setProperty('--red-neon', '#FF3131');
-      root.style.setProperty('--red-glow', 'rgba(255,49,49,0.45)');
-    }
-  }
-
-  return { launch, openTerminal, openSysMonitor, openBrowser, openFiles, openNotepad, openSysInfo, themeCycle };
+  return { launch, openTerminal, openSysMonitor, openBrowser, openFiles, openNotepad, openSysInfo, themeCycle, VFS };
 })();
 
 // =============================================================

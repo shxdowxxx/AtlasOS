@@ -1330,3 +1330,103 @@ button { font-family: inherit; color: inherit; background: none; border: none; c
   margin-top: 10px;
 }
 .settings-save:hover { background: rgba(210,4,45,0.3); }
+
+/* ============================================================
+   BOOT PROGRESS BAR
+   ============================================================ */
+.boot-progress-wrap {
+  position: absolute;
+  bottom: 60px; left: 50%; transform: translateX(-50%);
+  width: 480px;
+  display: flex; align-items: center; gap: 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  z-index: 10;
+}
+.boot-progress-label {
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  min-width: 160px;
+  font-size: 10px;
+}
+.boot-progress-track {
+  flex: 1;
+  height: 3px;
+  background: rgba(255,49,49,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.boot-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--red-dark), var(--red-neon));
+  box-shadow: 0 0 12px var(--red-glow);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+.boot-progress-pct {
+  color: var(--red-neon);
+  font-size: 10px;
+  min-width: 32px;
+  text-align: right;
+}
+
+/* ============================================================
+   TASKBAR — running windows strip
+   ============================================================ */
+.taskbar {
+  position: absolute;
+  bottom: 62px; left: 50%; transform: translateX(-50%);
+  max-width: 80vw;
+  display: flex; align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(5,5,7,0.82);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(255,49,49,0.08);
+  border-radius: 8px;
+  z-index: 990;
+  min-height: 0;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  transition: opacity 0.3s ease;
+  pointer-events: none; /* invisible when empty */
+}
+.taskbar:has(.taskbar-btn) {
+  pointer-events: auto;
+}
+/* Fallback for browsers without :has support */
+.taskbar.has-items { pointer-events: auto; }
+
+.taskbar-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 12px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  max-width: 160px;
+}
+.taskbar-btn i { font-size: 14px; color: var(--red-crimson); flex-shrink: 0; }
+.taskbar-btn span { overflow: hidden; text-overflow: ellipsis; }
+.taskbar-btn:hover {
+  background: rgba(255,49,49,0.1);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+.taskbar-btn.active {
+  background: rgba(255,49,49,0.12);
+  border-color: var(--border-hot);
+  color: var(--red-neon);
+}
+.taskbar-btn.active i { color: var(--red-neon); }
+.taskbar-btn.minimized {
+  opacity: 0.45;
+  border-style: dashed;
+}

@@ -19,6 +19,13 @@
   <div class="boot-terminal">
     <pre id="boot-log" class="boot-log"></pre>
   </div>
+  <div class="boot-progress-wrap">
+    <div class="boot-progress-label" id="boot-prog-label">INITIALIZING...</div>
+    <div class="boot-progress-track">
+      <div class="boot-progress-bar" id="boot-prog-bar"></div>
+    </div>
+    <div class="boot-progress-pct" id="boot-prog-pct">0%</div>
+  </div>
   <div class="boot-logo" id="boot-logo">
     <div class="boot-logo-glitch" data-text="ATLAS">ATLAS</div>
     <div class="boot-logo-sub">OPERATING SYSTEM v1.0.0</div>
@@ -63,6 +70,9 @@
 
   <!-- Windows mount -->
   <div id="windows-root" class="windows-root"></div>
+
+  <!-- TASKBAR — running windows -->
+  <div id="taskbar" class="taskbar"></div>
 
   <!-- DOCK -->
   <div class="dock-container">

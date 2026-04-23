@@ -8,52 +8,83 @@
   // BOOT SEQUENCE
   // =============================================================
   const BOOT_LINES = [
-    { t: 0,    text: '[BIOS] Atlas Mainboard v6.66 — POST initiated...', cls: 'dim' },
-    { t: 120,  text: '[BIOS] Memory test: 32768 MiB', cls: 'dim' },
-    { t: 180,  text: '[BIOS] CPU: Atlas-Core @ 6.66GHz (16 threads)', cls: 'dim' },
-    { t: 240,  text: '[BIOS] GPU: Crimson RTX 5090', cls: 'dim' },
-    { t: 300,  text: '[BOOT] Loading atlas-midnight kernel 6.6.6...', cls: '' },
-    { t: 420,  text: '[ OK ] Initializing crimson subsystems', cls: 'ok' },
-    { t: 520,  text: '[ OK ] Mounting /atlas (executive clearance)', cls: 'ok' },
-    { t: 640,  text: '[ OK ] Starting window_mgr daemon', cls: 'ok' },
-    { t: 760,  text: '[ OK ] Starting hud_daemon', cls: 'ok' },
-    { t: 860,  text: '[ OK ] Starting wallpaper_fx (canvas accelerated)', cls: 'ok' },
-    { t: 980,  text: '[WARN] Unencrypted ingress detected on port 6660', cls: 'warn' },
-    { t: 1080, text: '[ OK ] Crimson Net firewall engaged', cls: 'ok' },
-    { t: 1180, text: '[BOOT] Running /etc/atlas/init.d/...', cls: '' },
-    { t: 1280, text: '[ OK ] atlas_cmd ready', cls: 'ok' },
-    { t: 1380, text: '[ OK ] nexus_browser ready', cls: 'ok' },
-    { t: 1480, text: '[ OK ] sys_monitor ready', cls: 'ok' },
-    { t: 1580, text: '[BOOT] Unlocking operator session: itzzzshxdow', cls: '' },
-    { t: 1700, text: '[ OK ] Session unlocked. Clearance: EXECUTIVE', cls: 'ok' },
-    { t: 1820, text: '[ OK ] All stations nominal.', cls: 'ok' },
-    { t: 1940, text: '', cls: '' },
-    { t: 2020, text: 'Initializing Midnight Shell...', cls: 'err' },
+    { t: 0,    text: 'ATLAS MAINBOARD v6.66 // POST_INIT', cls: 'dim' },
+    { t: 60,   text: '══════════════════════════════════════════════════', cls: 'dim' },
+    { t: 130,  text: '[BIOS] CPU: Atlas-Core Ω @ 6.66GHz — 16 cores / 32 threads', cls: 'dim' },
+    { t: 210,  text: '[BIOS] L1: 512KB  L2: 8MB  L3: 64MB — ALL BANKS NOMINAL', cls: 'dim' },
+    { t: 310,  text: '[BIOS] Memory test: 32768 MiB DDR6 @ 8400 MT/s', cls: 'dim' },
+    { t: 430,  text: '[BIOS] ████████████████████████ [32768/32768 MiB] — PASS', cls: 'dim' },
+    { t: 530,  text: '[BIOS] GPU: Crimson RTX Ω 5090 — 24 GB VRAM — OK', cls: 'dim' },
+    { t: 630,  text: '[BIOS] NVMe_Atlas_0 (2 TB) — ONLINE  NVMe_Backup (1 TB) — STANDBY', cls: 'dim' },
+    { t: 730,  text: '[BIOS] Trusted Platform Module: SEALED — cryptographic root OK', cls: 'dim' },
+    { t: 840,  text: '[BIOS] POST complete. Handing off to bootloader.', cls: 'dim' },
+    { t: 920,  text: '', cls: '' },
+    { t: 980,  text: '[BOOT] Loading atlas-midnight kernel 6.6.6 ...', cls: '' },
+    { t: 1100, text: '[ OK ] Kernel decompressed: 44.2 MiB', cls: 'ok' },
+    { t: 1190, text: '[ OK ] Init system: crimson_init v2.0 [PID 1]', cls: 'ok' },
+    { t: 1280, text: '[ OK ] Mounting /atlas (root filesystem)', cls: 'ok' },
+    { t: 1360, text: '[ OK ] Initializing crimson subsystems', cls: 'ok' },
+    { t: 1440, text: '[ OK ] Starting window_mgr [PID 1024]', cls: 'ok' },
+    { t: 1520, text: '[ OK ] Starting hud_daemon [PID 1088]', cls: 'ok' },
+    { t: 1600, text: '[ OK ] Starting wallpaper_fx [canvas-accel] [PID 1096]', cls: 'ok' },
+    { t: 1700, text: '[WARN] Unencrypted ingress on port 6660 — isolating', cls: 'warn' },
+    { t: 1800, text: '[ OK ] Crimson Net firewall: ENGAGED — ingress blocked', cls: 'ok' },
+    { t: 1900, text: '[ OK ] Neuro-Link signal lock: 100%', cls: 'ok' },
+    { t: 2000, text: '[BOOT] Running /etc/atlas/init.d/ ...', cls: '' },
+    { t: 2090, text: '[ OK ] atlas_cmd [PID 1280]  nexus_browser [PID 1296]', cls: 'ok' },
+    { t: 2170, text: '[ OK ] sys_monitor [PID 1312]  sentinel_ai [PID 1102] — WATCHING', cls: 'ok' },
+    { t: 2270, text: '[BOOT] Establishing encrypted operator session ...', cls: '' },
+    { t: 2420, text: '[ OK ] Session clearance: OPERATOR', cls: 'ok' },
+    { t: 2560, text: '[ OK ] All stations nominal. Atlas OS ready.', cls: 'ok' },
+    { t: 2680, text: '', cls: '' },
+    { t: 2760, text: '> Initializing Midnight Shell...', cls: 'err' },
   ];
 
-  function runBoot() {
-    const logEl = document.getElementById('boot-log');
-    const logoEl = document.getElementById('boot-logo');
-    const bootScreen = document.getElementById('boot-screen');
+  const BOOT_TOTAL_MS = 3800;
 
-    BOOT_LINES.forEach(line => {
+  function runBoot() {
+    const logEl    = document.getElementById('boot-log');
+    const logoEl   = document.getElementById('boot-logo');
+    const bootScreen = document.getElementById('boot-screen');
+    const progBar  = document.getElementById('boot-prog-bar');
+    const progPct  = document.getElementById('boot-prog-pct');
+    const progLbl  = document.getElementById('boot-prog-label');
+
+    const lastT = BOOT_LINES[BOOT_LINES.length - 1].t;
+
+    BOOT_LINES.forEach((line, i) => {
       setTimeout(() => {
         const span = document.createElement('span');
         span.className = line.cls;
         span.textContent = line.text + '\n';
         logEl.appendChild(span);
         logEl.scrollTop = logEl.scrollHeight;
+
+        // Update progress bar
+        const pct = Math.round((line.t / lastT) * 90);
+        if (progBar) progBar.style.width = pct + '%';
+        if (progPct) progPct.textContent = pct + '%';
+        if (progLbl) {
+          if (pct < 20)  progLbl.textContent = 'POST CHECK...';
+          else if (pct < 40) progLbl.textContent = 'LOADING KERNEL...';
+          else if (pct < 60) progLbl.textContent = 'STARTING DAEMONS...';
+          else if (pct < 80) progLbl.textContent = 'SECURING NETWORK...';
+          else               progLbl.textContent = 'FINALIZING SESSION...';
+        }
       }, line.t);
     });
 
-    // Reveal logo near the end
+    // Fill bar to 100% then reveal logo
     setTimeout(() => {
+      if (progBar) progBar.style.width = '100%';
+      if (progPct) progPct.textContent = '100%';
+      if (progLbl) progLbl.textContent = 'READY';
       logoEl.classList.add('visible');
-    }, 2200);
+    }, lastT + 200);
 
     // Transition to desktop
     setTimeout(() => {
-      bootScreen.style.transition = 'opacity 0.6s ease';
+      bootScreen.style.transition = 'opacity 0.7s ease';
       bootScreen.style.opacity = '0';
       setTimeout(() => {
         bootScreen.remove();
@@ -61,8 +92,8 @@
         AtlasBootTime = performance.now();
         initDesktop();
         Sound.boot();
-      }, 600);
-    }, 3400);
+      }, 700);
+    }, BOOT_TOTAL_MS);
   }
 
   // =============================================================
@@ -164,6 +195,7 @@
     initContextMenu();
     initDesktopIcons();
     initKeyboard();
+    initTaskbar();
 
     // Initialize Clearance UI
     updateClearanceUI();
@@ -402,6 +434,12 @@
       if (hudPresenceEl) hudPresenceEl.textContent = count;
       if (hubPresenceEl) hubPresenceEl.textContent = count;
     });
+    // Firebase module fires before desktop mounts — read cached value immediately
+    const cached = window.AtlasPresenceCount;
+    if (cached != null) {
+      if (hudPresenceEl) hudPresenceEl.textContent = cached;
+      if (hubPresenceEl) hubPresenceEl.textContent = cached;
+    }
   }
 
   // =============================================================
@@ -806,6 +844,55 @@
         Atlas.notify(`Wallpaper: ${wallpaperMode.toUpperCase()}`);
       }
     });
+  }
+
+  // =============================================================
+  // TASKBAR — running windows strip above the dock
+  // =============================================================
+  function initTaskbar() {
+    const taskbar = document.getElementById('taskbar');
+    if (!taskbar) return;
+
+    // Poll WM state to keep taskbar in sync
+    setInterval(() => {
+      const wins = WM.state.windows;
+      const existing = new Set([...taskbar.querySelectorAll('[data-win-id]')].map(b => b.dataset.winId));
+      const current = new Set([...wins.keys()]);
+
+      // Remove closed windows
+      existing.forEach(id => {
+        if (!current.has(id)) taskbar.querySelector(`[data-win-id="${id}"]`)?.remove();
+      });
+
+      // Add new windows
+      current.forEach(id => {
+        if (!existing.has(id)) {
+          const desc = wins.get(id);
+          const btn = document.createElement('button');
+          btn.className = 'taskbar-btn';
+          btn.dataset.winId = id;
+          btn.title = desc.title;
+          btn.innerHTML = `<i class="${desc.icon}"></i><span>${desc.title}</span>`;
+          btn.addEventListener('click', () => {
+            const d = WM.state.windows.get(id);
+            if (!d) return;
+            if (d.minimized) { WM.focus(id); }
+            else if (WM.state.focusedId === id) { WM.minimize(id); }
+            else { WM.focus(id); }
+          });
+          taskbar.appendChild(btn);
+        }
+      });
+
+      // Update active/minimized classes
+      current.forEach(id => {
+        const btn = taskbar.querySelector(`[data-win-id="${id}"]`);
+        if (!btn) return;
+        const desc = wins.get(id);
+        btn.classList.toggle('minimized', !!desc.minimized);
+        btn.classList.toggle('active', WM.state.focusedId === id && !desc.minimized);
+      });
+    }, 200);
   }
 
   // =============================================================

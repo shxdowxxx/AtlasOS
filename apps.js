@@ -4,6 +4,50 @@
 
 const Apps = (() => {
 
+  // =============================================================
+  // MISSION / CLEARANCE PROGRESSION SYSTEM
+  // =============================================================
+  const MISSION_KEY = 'atlas_missions';
+  function _mGet() { return JSON.parse(localStorage.getItem(MISSION_KEY) || '{}'); }
+  function _mSet(id) {
+    const s = _mGet(); s[id] = true;
+    localStorage.setItem(MISSION_KEY, JSON.stringify(s));
+    _mCheck();
+  }
+  function _mDone(id) { return !!_mGet()[id]; }
+
+  const EXEC_MISSIONS = [
+    { id: 'm_boot',      label: 'Desktop initialized',                hint: '(auto)' },
+    { id: 'm_neofetch',  label: 'Run neofetch',                       hint: 'neofetch' },
+    { id: 'm_manifest',  label: 'Read manifest.atlas',                 hint: 'cat manifest.atlas' },
+    { id: 'm_sentinel',  label: 'Query Sentinel about clearance',      hint: 'sentinel clearance' },
+  ];
+  const ROOT_MISSIONS = [
+    { id: 'm_vault',     label: 'Read encrypted_vault.txt',           hint: 'cat encrypted_vault.txt (req EXEC)' },
+    { id: 'm_hack',      label: 'Run hack sequence on crimson-net',   hint: 'hack crimson-net' },
+    { id: 'm_directive', label: 'Read ops_directive.sys',             hint: 'cd /System && cat ops_directive.sys' },
+    { id: 'm_ping',      label: 'Ping sentinel-node',                 hint: 'ping sentinel-node' },
+  ];
+
+  function _mCheck() {
+    const current = window.Atlas ? window.Atlas.state.clearance : 'OPERATOR';
+    if (current === 'OPERATOR' && EXEC_MISSIONS.every(m => _mDone(m.id))) {
+      setTimeout(() => {
+        if (window.Atlas) window.Atlas.setClearance('EXECUTIVE');
+        window.dispatchEvent(new CustomEvent('atlas:mission-unlock', { detail: { level: 'EXECUTIVE' } }));
+      }, 600);
+    }
+    if (current === 'EXECUTIVE' && ROOT_MISSIONS.every(m => _mDone(m.id))) {
+      setTimeout(() => {
+        if (window.Atlas) window.Atlas.setClearance('ROOT');
+        window.dispatchEvent(new CustomEvent('atlas:mission-unlock', { detail: { level: 'ROOT' } }));
+      }, 600);
+    }
+  }
+
+  // Mark boot done once desktop is up
+  setTimeout(() => _mSet('m_boot'), 100);
+
   // ---------- Utility ----------
   function el(tag, attrs = {}, children = []) {
     const n = document.createElement(tag);
@@ -68,30 +112,46 @@ const Apps = (() => {
 
     const COMMANDS = {
       help: () => {
-        writeHTML(`<span class="accent">Available commands:</span>`);
-        const rows = [
-          ['help',     'List all commands'],
-          ['clear',    'Clear the terminal buffer'],
-          ['ls',       'List directory contents'],
-          ['cd',       'Change directory'],
-          ['cat',      'Read file content'],
-          ['mkdir',    'Create a new folder'],
-          ['touch',    'Create a new file'],
-          ['rm',       'Remove a file or folder'],
-          ['sentinel', 'Interact with Siz-Sentinel'],
-          ['override', 'Elevate session clearance'],
-          ['screenshot', 'Capture current desktop'],
-          ['whoami',   'Print current user session'],
-          ['neofetch', 'Display system info'],
-          ['theme',    'Change UI intensity'],
-          ['date',     'Print system time'],
-          ['reboot',   'Restart simulation'],
+        writeHTML(`<span class="accent">══ ATLAS_CMD // AVAILABLE COMMANDS ══</span>`);
+        const groups = [
+          ['FILESYSTEM', [
+            ['ls',         'List directory contents'],
+            ['cd <dir>',   'Change directory'],
+            ['cat <file>', 'Read file content'],
+            ['mkdir',      'Create directory'],
+            ['touch',      'Create file'],
+            ['rm',         'Remove file or directory'],
+          ]],
+          ['SYSTEM', [
+            ['whoami',     'Display operator session'],
+            ['neofetch',   'System info panel'],
+            ['date',       'Print system time'],
+            ['history',    'Show command history'],
+            ['clear',      'Clear terminal buffer'],
+            ['reboot',     'Restart simulation'],
+            ['screenshot', 'Capture desktop as PNG'],
+            ['theme',      'Change UI intensity (low|mid|high)'],
+          ]],
+          ['NETWORK', [
+            ['ping <host>',   'Probe a network node'],
+            ['hack <target>', 'Run intrusion sequence'],
+          ]],
+          ['INTEL', [
+            ['sentinel <msg>', 'Query Sentinel AI'],
+            ['override <key>', 'Elevate session clearance'],
+            ['missions',       'View clearance progression'],
+            ['echo <text>',    'Echo text'],
+          ]],
         ];
-        rows.forEach(([k, v]) => writeHTML(`  <span style="color:var(--red-neon)">${k.padEnd(10)}</span> <span style="color:var(--text-secondary)">${v}</span>`));
+        groups.forEach(([label, rows]) => {
+          writeHTML(`<span style="color:var(--red-crimson);letter-spacing:2px;font-size:0.9em"> ${label}</span>`);
+          rows.forEach(([k, v]) => writeHTML(`  <span style="color:var(--red-neon)">${k.padEnd(16)}</span><span style="color:var(--text-secondary)">${v}</span>`));
+        });
       },
       sentinel: (args) => {
         const msg = args.join(' ').toLowerCase();
         if (!msg) return write('SENTINEL: State your inquiry, Operator.', 'accent');
+        if (msg.includes('clearance')) _mSet('m_sentinel');
         const responses = [
           "Your query has been logged. Corporate review pending.",
           "That information is restricted to Level 5 Executives.",
@@ -192,6 +252,9 @@ const Apps = (() => {
             write(`Run: override <key>  to elevate session.`, 'sys');
           } else {
             write(entry.content || '', 'sys');
+            if (name === 'manifest.atlas') _mSet('m_manifest');
+            if (name === 'encrypted_vault.txt') _mSet('m_vault');
+            if (name === 'ops_directive.sys') _mSet('m_directive');
           }
         } else {
           write(`cat: ${name}: No such file`, 'err');
@@ -221,6 +284,105 @@ const Apps = (() => {
           write(`rm: cannot remove '${name}': No such file or directory`, 'err');
         }
       },
+      history: () => {
+        if (history.length === 0) return write('No commands in history.', 'sys');
+        history.forEach((cmd, i) => writeHTML(`  <span style="color:var(--text-muted)">${String(i + 1).padStart(3)}.</span>  <span style="color:var(--text-primary)">${escapeHTML(cmd)}</span>`));
+      },
+
+      ping: (args) => {
+        const hostname = args[0];
+        if (!hostname) return write('Usage: ping <host>', 'err');
+        const KNOWN = {
+          'sentinel-node': '10.66.0.1',
+          'crimson-net':   '10.66.0.254',
+          'mainframe':     '10.66.1.1',
+          'nexus-hub':     '10.66.2.100',
+          'localhost':     '127.0.0.1',
+        };
+        const ip = KNOWN[hostname.toLowerCase()];
+        if (!ip) return write(`ping: ${hostname}: Name or service not known`, 'err');
+        write(`PING ${hostname} (${ip}): 56 bytes of data`, 'sys');
+        let count = 0;
+        const interval = setInterval(() => {
+          if (!document.body.contains(host)) { clearInterval(interval); return; }
+          const rtt = (Math.random() * 4 + 0.8).toFixed(3);
+          write(`64 bytes from ${ip}: icmp_seq=${count + 1} ttl=64 time=${rtt} ms`, 'ok');
+          count++;
+          if (count >= 4) {
+            clearInterval(interval);
+            write(`--- ${hostname} ping statistics ---`, 'sys');
+            write(`4 packets transmitted, 4 received, 0% packet loss`, 'sys');
+            if (hostname.toLowerCase() === 'sentinel-node') _mSet('m_ping');
+          }
+        }, 500);
+      },
+
+      hack: (args) => {
+        const target = (args[0] || '').toLowerCase();
+        const VALID = { 'crimson-net': '10.66.0.254', 'sentinel-node': '10.66.0.1', 'mainframe': '10.66.1.1' };
+        if (!target || !VALID[target]) {
+          write('Usage: hack <target>', 'err');
+          write('Known targets: crimson-net  sentinel-node  mainframe', 'sys');
+          return;
+        }
+        const ip = VALID[target];
+        const lines = [
+          [0,    `[INIT] Targeting ${target} (${ip}) ...`, 'sys'],
+          [300,  '[SCAN] Port sweep: 22 80 443 6660 8080 9090 ...', 'sys'],
+          [700,  '[SCAN] Open ports: 80/tcp  6660/tcp  9090/tcp', 'accent'],
+          [1100, '[ENUM] Identifying service fingerprints...', 'sys'],
+          [1500, `[ENUM] ${target} :: Atlas-NetD v3.1.2 // Crimson-Enc`, 'accent'],
+          [1900, '[XPLOIT] Loading payload: buffer_overflow_v9.hex', 'sys'],
+          [2300, '[XPLOIT] Injecting shellcode... ████████████████ 100%', 'sys'],
+          [2700, '[AUTH] Brute-forcing session token...', 'sys'],
+          [3100, '[AUTH] ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 78%', 'sys'],
+          [3500, '[AUTH] ████████████████████████████████████ 100% — CRACKED', 'ok'],
+          [3900, `[ACCESS] Shell established on ${target}`, 'ok'],
+          [4200, `[EXFIL] Extracting encrypted data stream...`, 'sys'],
+          [4600, '[EXFIL] 512 KB extracted — transfer complete.', 'ok'],
+          [5000, `[DONE] Session on ${target} closed. Evidence purged.`, 'ok'],
+        ];
+        lines.forEach(([t, text, cls]) => setTimeout(() => write(text, cls), t));
+        setTimeout(() => {
+          if (target === 'crimson-net') _mSet('m_hack');
+          if (window.Atlas) window.Atlas.notify(`INTRUSION: ${target} compromised.`, 5000);
+        }, 5200);
+      },
+
+      missions: () => {
+        const clr = window.Atlas ? window.Atlas.state.clearance : 'OPERATOR';
+        writeHTML(`<span class="accent">══ ATLAS_CMD // CLEARANCE PROGRESSION ══</span>`);
+        writeHTML(`<span style="color:var(--text-secondary)">Current clearance: <span style="color:var(--red-neon)">${clr}</span></span>`);
+        write('', '');
+
+        writeHTML(`<span style="color:var(--red-crimson)">EXECUTIVE CLEARANCE OBJECTIVES:</span>`);
+        EXEC_MISSIONS.forEach(m => {
+          const done = _mDone(m.id);
+          const icon = done ? '✓' : '○';
+          const col  = done ? '#4ade80' : 'var(--text-muted)';
+          writeHTML(`  <span style="color:${col}">${icon}</span>  <span style="color:${done ? 'var(--text-primary)' : 'var(--text-muted)'}">${m.label}</span>  <span style="color:var(--text-muted);font-size:0.85em">[${m.hint}]</span>`);
+        });
+
+        const execAll = EXEC_MISSIONS.every(m => _mDone(m.id));
+        if (execAll) {
+          writeHTML(`  <span style="color:#4ade80">→ EXECUTIVE unlocked</span>`);
+        }
+
+        write('', '');
+        writeHTML(`<span style="color:var(--red-crimson)">ROOT CLEARANCE OBJECTIVES: ${clr === 'OPERATOR' ? '(req EXECUTIVE)' : ''}</span>`);
+        ROOT_MISSIONS.forEach(m => {
+          const done = _mDone(m.id);
+          const locked = clr === 'OPERATOR';
+          const icon = done ? '✓' : (locked ? '🔒' : '○');
+          const col  = done ? '#4ade80' : (locked ? 'var(--text-muted)' : 'var(--text-secondary)');
+          writeHTML(`  <span style="color:${col}">${icon}</span>  <span style="color:${col}">${m.label}</span>  <span style="color:var(--text-muted);font-size:0.85em">[${m.hint}]</span>`);
+        });
+        const rootAll = ROOT_MISSIONS.every(m => _mDone(m.id));
+        if (rootAll && clr !== 'ROOT') {
+          writeHTML(`  <span style="color:#4ade80">→ ROOT unlocked</span>`);
+        }
+      },
+
       reboot: () => {
         write('Initiating reboot sequence...', 'err');
         setTimeout(() => location.reload(), 800);
@@ -232,6 +394,7 @@ const Apps = (() => {
         write(`Theme set to ${mode.toUpperCase()} intensity.`, 'sys');
       },
       neofetch: () => {
+        _mSet('m_neofetch');
         const art = [
           '      ▄████▄      ',
           '    ▄█▀    ▀█▄    ',

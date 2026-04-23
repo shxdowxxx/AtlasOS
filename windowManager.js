@@ -129,8 +129,16 @@ const WM = (() => {
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
       el.style.transform = '';
-      el.style.left = (startLeft + dx) + 'px';
-      el.style.top = Math.max(0, startTop + dy) + 'px';
+      let newLeft = startLeft + dx;
+      let newTop  = Math.max(32, startTop + dy); // don't go above HUD
+      // Edge snap — within 24px of viewport edge
+      const SNAP = 24;
+      const vw = window.innerWidth;
+      const winW = parseInt(el.style.width, 10) || el.offsetWidth;
+      if (newLeft < SNAP) newLeft = 0;
+      if (newLeft + winW > vw - SNAP) newLeft = vw - winW;
+      el.style.left = newLeft + 'px';
+      el.style.top  = newTop + 'px';
       el.style.transition = '';
       el.classList.remove('dragging');
       window.removeEventListener('mousemove', onMove);
@@ -177,10 +185,26 @@ const WM = (() => {
     const desc = state.windows.get(id);
     if (!desc || desc.minimized) return;
     desc.minimized = true;
-    desc.el.classList.add('minimizing');
+    const el = desc.el;
+    const r = el.getBoundingClientRect();
+    // Animate toward bottom-center (taskbar)
+    const tx = (window.innerWidth / 2) - (r.left + r.width / 2);
+    const ty = window.innerHeight - r.top;
+    el.style.transition = 'opacity 0.35s ease, transform 0.35s cubic-bezier(0.4,0,1,1)';
+    el.style.transformOrigin = 'center bottom';
+    el.style.transform = `translate(${tx}px, ${ty}px) scale(0.3)`;
+    el.style.opacity = '0';
+    el.style.pointerEvents = 'none';
     setTimeout(() => {
-      if (desc.minimized) desc.el.style.display = 'none';
-    }, 450);
+      if (desc.minimized) {
+        el.style.display = 'none';
+        el.style.transform = '';
+        el.style.opacity = '';
+        el.style.transition = '';
+        el.style.pointerEvents = '';
+      }
+    }, 360);
+    if (state.focusedId === id) state.focusedId = null;
   }
 
   function restore(id) {
@@ -188,7 +212,20 @@ const WM = (() => {
     if (!desc) return;
     desc.minimized = false;
     desc.el.style.display = '';
+    desc.el.style.transform = '';
+    desc.el.style.opacity = '';
+    desc.el.style.transition = '';
+    desc.el.style.pointerEvents = '';
     desc.el.classList.remove('minimizing');
+    requestAnimationFrame(() => {
+      desc.el.style.transition = 'opacity 0.25s ease, transform 0.3s var(--ease-snap, cubic-bezier(0.2,0.9,0.3,1.2))';
+      desc.el.style.opacity = '1';
+      desc.el.style.transform = 'scale(1) translateY(0)';
+      setTimeout(() => {
+        desc.el.style.transition = '';
+        desc.el.style.transform = '';
+      }, 300);
+    });
   }
 
   function toggleMaximize(id) {

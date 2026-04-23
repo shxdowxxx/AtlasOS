@@ -57,6 +57,7 @@ async function _removePresence() {
 
 // Watch presence collection → broadcast count
 onSnapshot(collection(db, 'presence'), (snap) => {
+  window.AtlasPresenceCount = snap.size; // cache for late-mounting HUD
   window.dispatchEvent(new CustomEvent('atlas:presence', { detail: { count: snap.size } }));
 });
 

@@ -239,9 +239,9 @@ const WM = (() => {
       };
       el.classList.add('maximized');
       el.style.left = '0px';
-      el.style.top = '0px';
+      el.style.top = '32px';          // clear the 32px HUD
       el.style.width = '100%';
-      el.style.height = '100%';
+      el.style.height = 'calc(100% - 32px)';
       desc.maximized = true;
     } else {
       el.classList.remove('maximized');

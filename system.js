@@ -46,9 +46,11 @@
     const logEl    = document.getElementById('boot-log');
     const logoEl   = document.getElementById('boot-logo');
     const bootScreen = document.getElementById('boot-screen');
+    const progWrap = document.getElementById('boot-progress-wrap');
     const progBar  = document.getElementById('boot-prog-bar');
     const progPct  = document.getElementById('boot-prog-pct');
     const progLbl  = document.getElementById('boot-prog-label');
+    let progVisible = false;
 
     const lastT = BOOT_LINES[BOOT_LINES.length - 1].t;
 
@@ -60,6 +62,12 @@
         logEl.appendChild(span);
         logEl.scrollTop = logEl.scrollHeight;
 
+        // Fade in progress wrap on first line
+        if (!progVisible && progWrap) {
+          progVisible = true;
+          progWrap.style.transition = 'opacity 0.4s ease';
+          progWrap.style.opacity = '1';
+        }
         // Update progress bar
         const pct = Math.round((line.t / lastT) * 90);
         if (progBar) progBar.style.width = pct + '%';
